@@ -13,7 +13,7 @@ use_gpu = True
 import numpy as np
 import cupy as xp
 from tensorflow import keras
-from numpy.random import default_rng
+#from numpy.random import default_rng
 
 #FEW imports
 import sys
@@ -32,9 +32,9 @@ from lisatools.sensitivity import *
 from fastlisaresponse import ResponseWrapper
 
 #Astropy imports for luminosity distance calculations
-import astropy.units as u
-import astropy.cosmology.units as cu
-from astropy.cosmology import LambdaCDM
+# import astropy.units as u
+# import astropy.cosmology.units as cu
+# from astropy.cosmology import LambdaCDM
 
 #oise whitening/noise generation imports
 from scipy.signal.windows import tukey
@@ -42,29 +42,81 @@ from scipy.signal.windows import tukey
 
 class EMRIGeneratorTDI(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, batch_size=32, dim=2**21, dt=10.,  TDI_channels="AET",
-                  shuffle=True, seed=2023):#T=1.,  TDI_channels=['TDIA','TDIE','TDIT']
+    def __init__(self, EMRI_params_dir, batch_size=32, dim=2**21, dt=10.,  TDI_channels="AET",
+                  shuffle=True, seed=2023):#list_IDs, T=1.,  TDI_channels=['TDIA','TDIE','TDIT']
         'Initialization'
         #self.T = T
-        self.list_IDs= list_IDs
+        #self.list_IDs= list_IDs
+        self.EMRI_params_dir = EMRI_params_dir
+
+        self.EMRI_params= np.load(self.EMRI_params_dir, allow_pickle=True)
+        self.EMRI_params_set_size= self.EMRI_params.shape[0]
+
+
+
+
+
+
         self.batch_size = batch_size
         self.dim = dim
         self.dt = dt
         self.TDI_channels=TDI_channels
-        self.T= dim*dt/YRSID_SI#round()
+        self.T= dim*dt/YRSID_SI
         self.channels_dict= {"AET":["AE","AE","T"], "AE":["AE","AE"]}#For use in the noise generation and whitening functions
         self.n_channels = len(TDI_channels)
         self.shuffle = shuffle
         self.on_epoch_end()
         self.seed= seed
         
-        #initialise RNG for parameter selection with a fixed seed
-        self.rng = default_rng(seed=seed)
+        np.random.seed(seed=self.seed)
         
+        #initialise RNG for parameter selection with a fixed seed
+        #self.rng = np.random.default_rng(seed=self.seed)
+
+
+
+
+
+        #Initialise the TDI/response wrapper
+        # order of the langrangian interpolation
+        t0 = 20000.0   # How many samples to remove from start and end of simulations
+        order = 25
+        orbit_file_esa = "/nesi/project/uoa00195/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"
+        orbit_kwargs_esa = dict(orbit_file=orbit_file_esa) # these are the orbit files that you will have cloned if you are using Michaels code.
+        # you do not need to generate them yourself. They’re already generated. 
+
+        # 1st or 2nd or custom (see docs for custom)
+        tdi_gen = "2nd generation"
+        tdi_kwargs_esa = dict(
+            orbit_kwargs=orbit_kwargs_esa, order=order, tdi=tdi_gen, tdi_chan=self.TDI_channels)#['TDIA','TDIE','TDIT'], ["TDI"+i for i in TDI_channels], , num_pts=self.dim
+
+        #Specify the indices of the sky coordinates in the array of parameters
+        index_lambda = 7 # Index of polar angle
+        index_beta = 8   # Index of phi angle
+
+        #Kwargs for the waveform generator
+        waveform_kwargs={"sum_kwargs":{"pad_output":True}}
+
+        #Initialise the waveform generator
+        generic_class_waveform_0PA_ecc = GenerateEMRIWaveform("FastSchwarzschildEccentricFlux", use_gpu = use_gpu, **waveform_kwargs)
+        #Then initialise the response wrapper
+        self.EMRI_TDI_0PA_ecc = ResponseWrapper(generic_class_waveform_0PA_ecc, self.T, self.dt,
+                                        index_lambda, index_beta, t0=t0,
+                                        flip_hx = True, use_gpu = use_gpu, is_ecliptic_latitude=False,
+                                        remove_garbage = "zero", n_overide= self.dim, **tdi_kwargs_esa)
+
+    '''If the TDI initialisation doesn't work in the __init__ method, could try putting it under on_train_begin(self)'''
         
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        '''
+        Ideally this should be int(np.floor(self.EMRI_params_set_size / self.batch_size))
+        
+        But this leads to too many steps which makes training too long.
+        
+        So for now, keep this at some small number.
+        '''
+        return 1
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -72,18 +124,44 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
         
         # Find list of IDs
-        list_IDs_temp = [self.list_IDs[k] for k in indexes]
-        X, y = self.__data_generation(list_IDs_temp)
+        #list_IDs_temp = [self.dataset_len[k] for k in indexes]
+
+        
+        X, y = self.__data_generation(indexes)#list_IDs_temp
         
         return X, y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(len(self.list_IDs))
+        self.indexes = np.arange(self.EMRI_params_set_size)#len(self.list_IDs)
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
+            #self.rng.shuffle(self.indexes)
+            
+
+    def __data_generation(self, temp_indexes):#list_IDs_temp
+        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        # Initialise an empty batch of training data
+        X = xp.empty((self.batch_size, self.n_channels, self.dim))
         
-    def zero_pad(self,data):
+        
+        #params= np.load(dataset_dir)#shape=[no. EMRIS, no. parameters]
+        
+        # Iterate EMRI waveform generation for our batch
+        for i, batch_index in zip(temp_indexes, np.arange(self.batch_size)):#list_IDs_temp            
+            waveform= self.EMRI_TDI_0PA_ecc(*self.EMRI_params[i,:])#Use a wrapper function that takes the initialised TDI response and spits out h(t)
+            
+            #Then preprocess with noise and whitening
+            noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
+            noisy_signal_AET= xp.asarray(waveform)+noise_AET
+            X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])#
+
+            
+        X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels)).get()
+        return X, X      
+
+        
+    def zero_pad(self, data):
         """
         This function takes in a vector and zero pads it so it is a power of two.
         """
@@ -139,98 +217,66 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         #IFFTing back into the time domain
         return xp.fft.irfft(whitened_signal_fd_AET, n=len(noisy_signal_td_AET[0]))
         
-    def sample_EMRI_parameters(self, LCDM_model, redshift_range=[0.1,2]):
-        ''' CURRENTLY NOT USEFUL AS WE HAVE ALREADY SAMPLED PARAMETERS
-        Generate data according to randomised parameters.
+    # def sample_EMRI_parameters(self, LCDM_model, redshift_range=[0.1,2]):
+        # ''' CURRENTLY NOT USEFUL AS WE HAVE ALREADY SAMPLED PARAMETERS
+        # Generate data according to randomised parameters.
 
-        The parameters are:
+        # The parameters are:
 
-        eta: mass ratio mu/M
-        M: larger BH mass
-        mu: smaller CO mass
-        e0: initial eccentricity
-        p0: Initial semilatus rectum
-        theta: Polar viewing angle
-        phi: Azimuthal viewing angle
-        phi_phi0: Initial phase of azimuthal viewing angle in phi plane
-        phi_r0: Initial phase of azimuthal viewing angle is r plane
-        dist: luminosity distance
-        qS: Sky location polar angle in ecliptic coordinates
-        phiS: Sky location azimuthal angle in ecliptic coordinates
-        qK: Initial BH spin polar angle in ecliptic coordinates
-        phiK: Initial BH spin azimuthal angle in ecliptic coordinates
+        # eta: mass ratio mu/M
+        # M: larger BH mass
+        # mu: smaller CO mass
+        # e0: initial eccentricity
+        # p0: Initial semilatus rectum
+        # theta: Polar viewing angle
+        # phi: Azimuthal viewing angle
+        # phi_phi0: Initial phase of azimuthal viewing angle in phi plane
+        # phi_r0: Initial phase of azimuthal viewing angle is r plane
+        # dist: luminosity distance
+        # qS: Sky location polar angle in ecliptic coordinates
+        # phiS: Sky location azimuthal angle in ecliptic coordinates
+        # qK: Initial BH spin polar angle in ecliptic coordinates
+        # phiK: Initial BH spin azimuthal angle in ecliptic coordinates
 
-        LDCM model used to convert redshifts to luminosity distances.
-        '''
-        set_of_eta= self.rng.uniform(1e-6,1e-4, size= self.batch_size)#Used indirectly in calculating mu
-        set_of_M= self.rng.uniform(1e4, 1e7, size = self.batch_size)
-        set_of_mu= set_of_eta*set_of_M
-        set_of_a= np.array([None for i in range(self.batch_size)])
-        set_of_e0= self.rng.uniform(0, .7, size = self.batch_size)#Initial eccentricity
-        set_of_p0= self.rng.uniform(10, 16+set_of_e0)#Needs to be based on set_of_e0
-        set_of_x0= np.array([None for i in range(self.batch_size)])
-        
-        
-        
-        set_of_redshift= rng.uniform(redshift_range[0], redshift_range[1], size= batch_size) * cu.redshift    
-        set_of_dist = np.array(set_of_redshift.to(u.Gpc, cu.redshift_distance(LCDM_model, kind="luminosity")))
-
-        #set_of_dist = np.array([1 for i in range(self.batch_size)]) #currently a fixed distance of 1GPc, this may need to be changed
-        
-        set_of_theta= self.rng.uniform(-np.pi/2, +np.pi/2, size = self.batch_size)#polar viewing angle
-        set_of_phi= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        set_of_phi_phi0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        set_of_phi_theta0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        set_of_phi_r0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        
-        
-        #TDI parameters
-        #Check these parameter ranges - they may not be correct
-        set_of_qS= self.rng.uniform(-np.pi/2, +np.pi/2, size=self.batch_size)
-        set_of_phiS= self.rng.uniform(0, 2*np.pi, size=self.batch_size)
-        set_of_qK= self.rng.uniform(-np.pi/2, +np.pi/2, size=self.batch_size)
-        set_of_phiK= self.rng.uniform(0, 2*np.pi, size=self.batch_size)
-
-        
-        #order of params: [M, mu, a, p0, e0, x0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0]
-        # no need to return set_of_eta as it's not used in few()
-        return (set_of_M, set_of_mu, set_of_a, set_of_p0,
-                set_of_e0, set_of_x0, set_of_dist, set_of_qS,
-                set_of_phiS, set_of_qK, set_of_phiK, set_of_phi_phi0, 
-                set_of_phi_theta0, set_of_phi_r0)
-          
-    def __data_generation(self, list_IDs_temp):
-        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
-        # Initialization
-        X = np.empty((self.batch_size, self.n_channels, self.dim))
-        
-        X_params= np.load("XYZ_file_of_params.npy")#shape=[no. EMRIS, no. parameters]
-        
-        # Iterate EMRI waveform generation for our batch
-        for i in list_IDs_temp:
-            # Store sample
-            
-            
-            #X[i,:,:] = 
-            
-            waveform= #Use a wrapper function that takes the initialised TDI response and spits out h(t)
-            
-            #Then preprocess with noise and whitening
-            noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
-            noisy_signal_AET= xp.asarray(waveform)+noise_AET
-
-            X[i,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])#
-
-            
-        X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels))
-        return X, X      
-        
-        
-        
-        
-        
-        
-        
+        # LDCM model used to convert redshifts to luminosity distances.
+        # '''
+        # set_of_eta= self.rng.uniform(1e-6,1e-4, size= self.batch_size)#Used indirectly in calculating mu
+        # set_of_M= self.rng.uniform(1e4, 1e7, size = self.batch_size)
+        # set_of_mu= set_of_eta*set_of_M
+        # set_of_a= np.array([None for i in range(self.batch_size)])
+        # set_of_e0= self.rng.uniform(0, .7, size = self.batch_size)#Initial eccentricity
+        # set_of_p0= self.rng.uniform(10, 16+set_of_e0)#Needs to be based on set_of_e0
+        # set_of_x0= np.array([None for i in range(self.batch_size)])
+        # 
+        # 
+        # 
+        # set_of_redshift= rng.uniform(redshift_range[0], redshift_range[1], size= batch_size) * cu.redshift    
+        # set_of_dist = np.array(set_of_redshift.to(u.Gpc, cu.redshift_distance(LCDM_model, kind="luminosity")))
+        # 
+        # #set_of_dist = np.array([1 for i in range(self.batch_size)]) #currently a fixed distance of 1GPc, this may need to be changed
+        # 
+        # set_of_theta= self.rng.uniform(-np.pi/2, +np.pi/2, size = self.batch_size)#polar viewing angle
+        # set_of_phi= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
+        # set_of_phi_phi0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
+        # set_of_phi_theta0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
+        # set_of_phi_r0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
+        # 
+        # 
+        # #TDI parameters
+        # #Check these parameter ranges - they may not be correct
+        # set_of_qS= self.rng.uniform(-np.pi/2, +np.pi/2, size=self.batch_size)
+        # set_of_phiS= self.rng.uniform(0, 2*np.pi, size=self.batch_size)
+        # set_of_qK= self.rng.uniform(-np.pi/2, +np.pi/2, size=self.batch_size)
+        # set_of_phiK= self.rng.uniform(0, 2*np.pi, size=self.batch_size)
+        # 
+        # 
+        # #order of params: [M, mu, a, p0, e0, x0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0]
+        # # no need to return set_of_eta as it's not used in few()
+        # return (set_of_M, set_of_mu, set_of_a, set_of_p0,
+        #         set_of_e0, set_of_x0, set_of_dist, set_of_qS,
+        #         set_of_phiS, set_of_qK, set_of_phiK, set_of_phi_phi0, 
+        #         set_of_phi_theta0, set_of_phi_r0)
+                  
         
         
 #             'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -316,3 +362,14 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
 #             xp._default_memory_pool.free_all_blocks()
 
 #             return y, y
+    def declare_generator_params(self):
+        #Declare generator parameters
+        print("#################################")
+        print("####DATA GENERATOR PARAMETERS####")
+        print("#Batch size: ", self.batch_size)
+        print("#Time in years:", self.T)
+        print("#n_channels: ", self.n_channels)
+        print("#dt: ",self.dt)
+        print("#Length of timeseries:", self.dim)
+        print("#################################")
+

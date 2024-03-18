@@ -13,7 +13,7 @@ use_gpu = True
 import numpy as np
 import cupy as xp
 from tensorflow import keras
-from numpy.random import default_rng
+#from numpy.random import default_rng
 
 #FEW imports
 import sys
@@ -42,24 +42,36 @@ from scipy.signal.windows import tukey
 
 class EMRIGeneratorTDI(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, batch_size=32, dim=2**21, dt=10.,  TDI_channels="AET",
-                  shuffle=True, seed=2023):#T=1.,  TDI_channels=['TDIA','TDIE','TDIT']
+    def __init__(self, EMRI_params_dir, batch_size=32, dim=2**21, dt=10.,  TDI_channels="AET",
+                  shuffle=True, seed=2023):#list_IDs, T=1.,  TDI_channels=['TDIA','TDIE','TDIT']
         'Initialization'
         #self.T = T
-        self.list_IDs= list_IDs
+        #self.list_IDs= list_IDs
+        self.EMRI_params_dir = EMRI_params_dir
+
+        self.EMRI_params= np.load(self.EMRI_params_dir, allow_pickle=True)
+        self.EMRI_params_set_size= self.EMRI_params.shape[0]
+
+
+
+
+
+
         self.batch_size = batch_size
         self.dim = dim
         self.dt = dt
         self.TDI_channels=TDI_channels
-        self.T= dim*dt/YRSID_SI#round()
+        self.T= dim*dt/YRSID_SI
         self.channels_dict= {"AET":["AE","AE","T"], "AE":["AE","AE"]}#For use in the noise generation and whitening functions
         self.n_channels = len(TDI_channels)
         self.shuffle = shuffle
         self.on_epoch_end()
         self.seed= seed
         
+        np.random.seed(seed=self.seed)
+        
         #initialise RNG for parameter selection with a fixed seed
-        self.rng = default_rng(seed=seed)
+        #self.rng = np.random.default_rng(seed=self.seed)
 
 
 
@@ -91,13 +103,20 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         self.EMRI_TDI_0PA_ecc = ResponseWrapper(generic_class_waveform_0PA_ecc, self.T, self.dt,
                                         index_lambda, index_beta, t0=t0,
                                         flip_hx = True, use_gpu = use_gpu, is_ecliptic_latitude=False,
-                                        remove_garbage = "zero", n_overide= self.dim, **tdi_kwargs_esa)#+extra_T,None
+                                        remove_garbage = "zero", n_overide= self.dim, **tdi_kwargs_esa)
 
-
+    '''If the TDI initialisation doesn't work in the __init__ method, could try putting it under on_train_begin(self)'''
         
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        '''
+        Ideally this should be int(np.floor(self.EMRI_params_set_size / self.batch_size))
+        
+        But this leads to too many steps which makes training too long.
+        
+        So for now, keep this at some small number.
+        '''
+        return 1
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -105,18 +124,44 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
         
         # Find list of IDs
-        list_IDs_temp = [self.list_IDs[k] for k in indexes]
-        X, y = self.__data_generation(list_IDs_temp)
+        #list_IDs_temp = [self.dataset_len[k] for k in indexes]
+
+        
+        X, y = self.__data_generation(indexes)#list_IDs_temp
         
         return X, y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(len(self.list_IDs))
+        self.indexes = np.arange(self.EMRI_params_set_size)#len(self.list_IDs)
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
+            #self.rng.shuffle(self.indexes)
+            
+
+    def __data_generation(self, temp_indexes):#list_IDs_temp
+        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        # Initialise an empty batch of training data
+        X = xp.empty((self.batch_size, self.n_channels, self.dim))
         
-    def zero_pad(self,data):
+        
+        #params= np.load(dataset_dir)#shape=[no. EMRIS, no. parameters]
+        
+        # Iterate EMRI waveform generation for our batch
+        for i, batch_index in zip(temp_indexes, np.arange(self.batch_size)):#list_IDs_temp            
+            waveform= self.EMRI_TDI_0PA_ecc(*self.EMRI_params[i,:])#Use a wrapper function that takes the initialised TDI response and spits out h(t)
+            
+            #Then preprocess with noise and whitening
+            noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
+            noisy_signal_AET= xp.asarray(waveform)+noise_AET
+            X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])#
+
+            
+        X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels)).get()
+        return X, X      
+
+        
+    def zero_pad(self, data):
         """
         This function takes in a vector and zero pads it so it is a power of two.
         """
@@ -231,27 +276,7 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         #         set_of_e0, set_of_x0, set_of_dist, set_of_qS,
         #         set_of_phiS, set_of_qK, set_of_phiK, set_of_phi_phi0, 
         #         set_of_phi_theta0, set_of_phi_r0)
-          
-    def __data_generation(self, list_IDs_temp):
-        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
-        # Initialization
-        X = np.empty((self.batch_size, self.n_channels, self.dim))
-        
-        params= np.load("XYZ_file_of_params.npy")#shape=[no. EMRIS, no. parameters]
-        
-        # Iterate EMRI waveform generation for our batch
-        for i in list_IDs_temp:            
-            waveform= self.EMRI_TDI_0PA_ecc(*params[i,:])#Use a wrapper function that takes the initialised TDI response and spits out h(t)
-            
-            #Then preprocess with noise and whitening
-            noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
-            noisy_signal_AET= xp.asarray(waveform)+noise_AET
-            X[i,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])#
-
-            
-        X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels)).get()
-        return X, X      
-        
+                  
         
         
 #             'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -345,6 +370,6 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         print("#Time in years:", self.T)
         print("#n_channels: ", self.n_channels)
         print("#dt: ",self.dt)
-        print("#Length of timeseries:", self.len_seq)
+        print("#Length of timeseries:", self.dim)
         print("#################################")
 
