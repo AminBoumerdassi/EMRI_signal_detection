@@ -3,7 +3,6 @@ This script trains a CNN-autoencoder using the EMRI data generator, records loss
 It also uses some custom callbacks for testing on noise at the end of each epoch.
 '''
 
-
 from EMRI_generator_TDI import EMRIGeneratorTDI
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import LSTM, RepeatVector, Dense, TimeDistributed, Input, Conv1D, Conv1DTranspose, Cropping1D, ZeroPadding1D, Activation
