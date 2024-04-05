@@ -14,15 +14,38 @@ class TestOnNoise(Callback):
         self.losses = []
         
     def on_epoch_end(self, epoch, logs={}):
+        """The noise here might really be denoised noise. This could mean one of two things:
+            1. The actual output of denoised noise from the denoising AE i.e. something where the timeseries
+                is a flat line hovering around zero
+            2. A EMRI-free signal with no noise background whatsoever i.e.  an array of zeroes."""
+
+
         #Initialise an empty array to store noise samples for ONE batch
         x_test = xp.empty((self.generator.batch_size, self.generator.n_channels, self.generator.dim))
+
+
         #Iterate the noise generation and whitening over ONE batch
         for i in range(self.generator.batch_size):
+            """This noise generation no longer makes sense as our input doesn't have LISA noise"""
             noise_AET= self.generator.noise_td_AET(self.generator.dim, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])#["AE","AE","T"]
             x_test[i,:,:]= self.generator.noise_whiten_AET(noise_AET, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])
         #Reshape the batch of noise samples for input into the model 
         x_test= xp.reshape(x_test, (self.generator.batch_size, self.generator.dim, self.generator.n_channels)).get()
-        y_pred = self.model.evaluate(x_test, x_test)
+
+        #Make a prediction with the model, then calculate the corresponding loss
+        y_pred= self.model(x_test, training=False)
+
+        
+        ''' Tensorflow's in-built MSE function is janky so let's do it by hand.
+            The process is:
+            1. Find the difference between y_true and y_pred
+            2. Square that difference
+            3. Take the mean of the squared difference over axis 1
+            4. Sum the array of MSEs across the batch'''
+
+
+        batch_loss= np.sum(np.mean((x_test-y_pred.numpy())**2, axis=1))
+
         #State and store the losses from these noise samples
-        print("Noise loss: ", y_pred)        
-        self.losses.append(y_pred)
+        print("Noise loss: ", batch_loss)        
+        self.losses.append(batch_loss)

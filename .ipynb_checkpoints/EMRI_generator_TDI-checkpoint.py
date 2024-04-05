@@ -1,8 +1,7 @@
 '''
 This is a custom TensorFlow data generator object for generating time-domain EMRIs from a given set of parameters.
+It uses sets of EMRI parameters to generate and store time-domain EMRIs only for as long as is needed in a particular batch. 
 '''
-
-
 #---------------------------------------------------------------------------------------
 #Adapted from: https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
 #---------------------------------------------------------------------------------------
@@ -13,7 +12,6 @@ use_gpu = True
 import numpy as np
 import cupy as xp
 from tensorflow import keras
-#from numpy.random import default_rng
 
 #FEW imports
 import sys
@@ -31,11 +29,6 @@ from lisatools.sensitivity import *
 #fast lisa response imports
 from fastlisaresponse import ResponseWrapper
 
-#Astropy imports for luminosity distance calculations
-# import astropy.units as u
-# import astropy.cosmology.units as cu
-# from astropy.cosmology import LambdaCDM
-
 #oise whitening/noise generation imports
 from scipy.signal.windows import tukey
 
@@ -43,19 +36,17 @@ from scipy.signal.windows import tukey
 class EMRIGeneratorTDI(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, EMRI_params_dir, batch_size=32, dim=2**21, dt=10.,  TDI_channels="AET",
-                  shuffle=True, seed=2023):#list_IDs, T=1.,  TDI_channels=['TDIA','TDIE','TDIT']
+                  shuffle=True, seed=2023, add_noise=True):#list_IDs, T=1.,  TDI_channels=['TDIA','TDIE','TDIT']
         'Initialization'
         #self.T = T
         #self.list_IDs= list_IDs
         self.EMRI_params_dir = EMRI_params_dir
 
+        """Loading all parameter sets is not ideal since for a very large dataset e.g. 500K EMRIs,
+            this would eat into the available memory. For reference, if self.EMRI_params had dimensions
+            (500K,14) it would take up ???GB."""
         self.EMRI_params= np.load(self.EMRI_params_dir, allow_pickle=True)
         self.EMRI_params_set_size= self.EMRI_params.shape[0]
-
-
-
-
-
 
         self.batch_size = batch_size
         self.dim = dim
@@ -65,18 +56,13 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         self.channels_dict= {"AET":["AE","AE","T"], "AE":["AE","AE"]}#For use in the noise generation and whitening functions
         self.n_channels = len(TDI_channels)
         self.shuffle = shuffle
+        self.add_noise= add_noise
         self.on_epoch_end()
         self.seed= seed
         
+        #initialise RNG for noise generation with a fixed seed
         np.random.seed(seed=self.seed)
         
-        #initialise RNG for parameter selection with a fixed seed
-        #self.rng = np.random.default_rng(seed=self.seed)
-
-
-
-
-
         #Initialise the TDI/response wrapper
         # order of the langrangian interpolation
         t0 = 20000.0   # How many samples to remove from start and end of simulations
@@ -143,20 +129,17 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialise an empty batch of training data
         X = xp.empty((self.batch_size, self.n_channels, self.dim))
-        
-        
-        #params= np.load(dataset_dir)#shape=[no. EMRIS, no. parameters]
-        
+                
         # Iterate EMRI waveform generation for our batch
         for i, batch_index in zip(temp_indexes, np.arange(self.batch_size)):#list_IDs_temp            
-            waveform= self.EMRI_TDI_0PA_ecc(*self.EMRI_params[i,:])#Use a wrapper function that takes the initialised TDI response and spits out h(t)
+            #waveform= self.EMRI_TDI_0PA_ecc(*self.EMRI_params[i,:])#Use a wrapper function that takes the initialised TDI response and spits out h(t)
+            waveform= self.generate_TDI_EMRI(self.EMRI_params[i,:])
             
             #Then preprocess with noise and whitening
-            noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
+            noise_AET= self.add_noise * self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
             noisy_signal_AET= xp.asarray(waveform)+noise_AET
-            X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])#
+            X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])
 
-            
         X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels)).get()
         return X, X      
 
@@ -187,6 +170,13 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         #Transforming the frequency domain signal into the time domain
         return xp.fft.irfft(noise_f, n=N)
     
+    def generate_TDI_EMRI(self, EMRI_params):#response_wrapper,
+        '''
+        Generate ONE EMRI using the initialised TDI/response wrapper
+        from a set of parameters.
+        '''
+        return self.EMRI_TDI_0PA_ecc(*EMRI_params)#response_wrapper
+        
     
     def noise_whiten_AET(self, noisy_signal_td_AET, dt, channels=["AE","AE","T"]):
         '''This is vectorised for the AET channels.
@@ -216,152 +206,7 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
 
         #IFFTing back into the time domain
         return xp.fft.irfft(whitened_signal_fd_AET, n=len(noisy_signal_td_AET[0]))
-        
-    # def sample_EMRI_parameters(self, LCDM_model, redshift_range=[0.1,2]):
-        # ''' CURRENTLY NOT USEFUL AS WE HAVE ALREADY SAMPLED PARAMETERS
-        # Generate data according to randomised parameters.
-
-        # The parameters are:
-
-        # eta: mass ratio mu/M
-        # M: larger BH mass
-        # mu: smaller CO mass
-        # e0: initial eccentricity
-        # p0: Initial semilatus rectum
-        # theta: Polar viewing angle
-        # phi: Azimuthal viewing angle
-        # phi_phi0: Initial phase of azimuthal viewing angle in phi plane
-        # phi_r0: Initial phase of azimuthal viewing angle is r plane
-        # dist: luminosity distance
-        # qS: Sky location polar angle in ecliptic coordinates
-        # phiS: Sky location azimuthal angle in ecliptic coordinates
-        # qK: Initial BH spin polar angle in ecliptic coordinates
-        # phiK: Initial BH spin azimuthal angle in ecliptic coordinates
-
-        # LDCM model used to convert redshifts to luminosity distances.
-        # '''
-        # set_of_eta= self.rng.uniform(1e-6,1e-4, size= self.batch_size)#Used indirectly in calculating mu
-        # set_of_M= self.rng.uniform(1e4, 1e7, size = self.batch_size)
-        # set_of_mu= set_of_eta*set_of_M
-        # set_of_a= np.array([None for i in range(self.batch_size)])
-        # set_of_e0= self.rng.uniform(0, .7, size = self.batch_size)#Initial eccentricity
-        # set_of_p0= self.rng.uniform(10, 16+set_of_e0)#Needs to be based on set_of_e0
-        # set_of_x0= np.array([None for i in range(self.batch_size)])
-        # 
-        # 
-        # 
-        # set_of_redshift= rng.uniform(redshift_range[0], redshift_range[1], size= batch_size) * cu.redshift    
-        # set_of_dist = np.array(set_of_redshift.to(u.Gpc, cu.redshift_distance(LCDM_model, kind="luminosity")))
-        # 
-        # #set_of_dist = np.array([1 for i in range(self.batch_size)]) #currently a fixed distance of 1GPc, this may need to be changed
-        # 
-        # set_of_theta= self.rng.uniform(-np.pi/2, +np.pi/2, size = self.batch_size)#polar viewing angle
-        # set_of_phi= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        # set_of_phi_phi0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        # set_of_phi_theta0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        # set_of_phi_r0= self.rng.uniform(0, 2*np.pi, size = self.batch_size)
-        # 
-        # 
-        # #TDI parameters
-        # #Check these parameter ranges - they may not be correct
-        # set_of_qS= self.rng.uniform(-np.pi/2, +np.pi/2, size=self.batch_size)
-        # set_of_phiS= self.rng.uniform(0, 2*np.pi, size=self.batch_size)
-        # set_of_qK= self.rng.uniform(-np.pi/2, +np.pi/2, size=self.batch_size)
-        # set_of_phiK= self.rng.uniform(0, 2*np.pi, size=self.batch_size)
-        # 
-        # 
-        # #order of params: [M, mu, a, p0, e0, x0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0]
-        # # no need to return set_of_eta as it's not used in few()
-        # return (set_of_M, set_of_mu, set_of_a, set_of_p0,
-        #         set_of_e0, set_of_x0, set_of_dist, set_of_qS,
-        #         set_of_phiS, set_of_qK, set_of_phiK, set_of_phi_phi0, 
-        #         set_of_phi_theta0, set_of_phi_r0)
-                  
-        
-        
-#             'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
-#             # Initialization
-#             #dim= int(np.ceil(YRSID_SI*self.T/self.dt))#round(YRSID_SI*self.T/self.dt)
-#             #dim=2**21#2097152 or ~8 months if dt=10
-#             #dt = 10.0 # time step (s)
-#             X = xp.empty((self.batch_size, self.n_channels, self.dim))#self.dim, self.n_channels        
-
-#             #Randomly sample parameters
-#             (set_of_M, set_of_mu, set_of_a, set_of_p0,
-#                     set_of_e0, set_of_x0, set_of_dist, set_of_qS,
-#                     set_of_phiS, set_of_qK, set_of_phiK, set_of_phi_phi0, 
-#                     set_of_phi_theta0, set_of_phi_r0) = self.sample_EMRI_parameters()
-
-
-
-
-#     #FastLISAresponse initialisation
-#             # order of the langrangian interpolation
-#             t0 = 20000.0   # How many samples to remove from start and end of simulations
-#             order = 25
-#             orbit_file_esa = "/nesi/project/uoa00195/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"
-#             orbit_kwargs_esa = dict(orbit_file=orbit_file_esa) # these are the orbit files that you will have cloned if you are using Michaels code.
-#             # you do not need to generate them yourself. They’re already generated. 
-
-#             # 1st or 2nd or custom (see docs for custom)
-#             tdi_gen = "2nd generation"
-#             tdi_kwargs_esa = dict(
-#                 orbit_kwargs=orbit_kwargs_esa, order=order, tdi=tdi_gen, tdi_chan=self.TDI_channels)#['TDIA','TDIE','TDIT'], ["TDI"+i for i in TDI_channels], , num_pts=self.dim
-
-#             #Specify the indices of the sky coordinates in the array of parameters
-#             index_lambda = 7 # Index of polar angle
-#             index_beta = 8   # Index of phi angle
-
-#             #Kwargs for the waveform generator
-#             waveform_kwargs={"sum_kwargs":{"pad_output":True}}
-
-#             #Initialise the waveform generator
-#             generic_class_waveform_0PA_ecc = GenerateEMRIWaveform("FastSchwarzschildEccentricFlux", use_gpu = use_gpu, **waveform_kwargs)
-#             #Then initialise the response wrapper
-#             EMRI_TDI_0PA_ecc = ResponseWrapper(generic_class_waveform_0PA_ecc, self.T, self.dt,
-#                                           index_lambda, index_beta, t0=t0,
-#                                           flip_hx = True, use_gpu = use_gpu, is_ecliptic_latitude=False,
-#                                           remove_garbage = "zero", n_overide= self.dim, **tdi_kwargs_esa)#+extra_T,None
-
-#             #Looping EMRI generation
-#             for (i, M, mu, a, p0, e0, x0, dist, qS, phiS, qK, phiK, phi_phi0, phi_theta0,
-#             phi_r0) in zip(range(self.batch_size), set_of_M, set_of_mu, set_of_a, set_of_p0,
-#                     set_of_e0, set_of_x0, set_of_dist, set_of_qS, set_of_phiS, set_of_qK, set_of_phiK, set_of_phi_phi0, 
-#                     set_of_phi_theta0, set_of_phi_r0):
-#                 #Generate TDI'd waveform
-
-
-#                 # ================================== SET UP TRUE WAVEFORM =====================================
-#                 #any params not used by the waveform model will just be ignored in computation
-#                 #params = [M, mu, a, p0, e0, x0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0]
-#                 #print("Batch element no.: ", i)
-#                 #or some fixed params which are supposed to give SNR 20
-#                 params= [M, mu, a, p0, e0, x0, dist, qS, phiS, qK, phiK, phi_phi0, phi_theta0, phi_r0]
-#                 #print("Params are:", params)
-#                 waveform = EMRI_TDI_0PA_ecc(*params)#this is actually a list of arrays i.e. [h_TDIA, h_TDIE, h_TDIT]
-#                 #print("Waveform generated")
-#                 #Pad waveform since it may come out with the wrong length
-#                 #waveform= xp.pad(xp.asarray(waveform), (abs(self.dim-len(waveform))), constant_values=(0))
-
-#                 #Then preprocess with noise and whitening
-#                 noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
-#                 noisy_signal_AET= xp.asarray(waveform)+noise_AET
-
-#                 X[i,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])#
-
-
-#             #print("End of for loop")
-#             #X= X.toDlpack()
-#             #final_X= from_dlpack(X)
-#             X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels))
-#             y= X.get()
-
-#             #Free up GPU memory taken by FEW and cupy
-#             #del h_cross_and_plus
-#             del X, noise_AET, waveform#, EMRI_TDI_0PA_ecc
-#             xp._default_memory_pool.free_all_blocks()
-
-#             return y, y
+    
     def declare_generator_params(self):
         #Declare generator parameters
         print("#################################")
@@ -371,5 +216,6 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         print("#n_channels: ", self.n_channels)
         print("#dt: ",self.dt)
         print("#Length of timeseries:", self.dim)
+        print("Noise background: ", self.add_noise)
         print("#################################")
 

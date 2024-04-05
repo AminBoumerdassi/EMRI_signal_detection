@@ -1,0 +1,57 @@
+
+The following modules were not unloaded:
+   (Use "module --force purge" to unload all):
+
+  1) XALT/minimal   2) slurm   3) NeSI
+2024-03-25 14:37:28.891274: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-03-25 14:37:28.891369: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-03-25 14:37:29.006883: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-03-25 14:37:29.448248: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-03-25 14:38:09.335064: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1886] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38298 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:05:00.0, compute capability: 8.0
+1 Physical GPUs, 1 Logical GPUs
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv1d (Conv1D)             (None, 2097152, 32)       8224      
+                                                                 
+ conv1d_1 (Conv1D)           (None, 524288, 16)        65552     
+                                                                 
+ conv1d_2 (Conv1D)           (None, 131072, 8)         16392     
+                                                                 
+ conv1d_transpose (Conv1DTr  (None, 524288, 8)         8200      
+ anspose)                                                        
+                                                                 
+ conv1d_transpose_1 (Conv1D  (None, 2097152, 16)       16400     
+ Transpose)                                                      
+                                                                 
+ conv1d_transpose_2 (Conv1D  (None, 8388608, 32)       65568     
+ Transpose)                                                      
+                                                                 
+ conv1d_transpose_3 (Conv1D  (None, 8388608, 2)        66        
+ Transpose)                                                      
+                                                                 
+ activation (Activation)     (None, 8388608, 2)        0         
+                                                                 
+=================================================================
+Total params: 180402 (704.70 KB)
+Trainable params: 180402 (704.70 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#################################
+####DATA GENERATOR PARAMETERS####
+#Batch size:  8
+#Time in years: 2.658143162020893
+#n_channels:  2
+#dt:  10
+#Length of timeseries: 8388608
+Noise background:  True
+#################################
+Epoch 1/150
+2024-03-25 14:41:24.253672: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:442] Loaded cuDNN version 8600
+2024-03-25 14:44:06.086824: I tensorflow/compiler/xla/stream_executor/cuda/cuda_driver.cc:746] failed to allocate 16.00GiB (17179869184 bytes) from device: CUDA_ERROR_OUT_OF_MEMORY: out of memory
+2024-03-25 14:44:06.090090: I tensorflow/compiler/xla/stream_executor/cuda/cuda_driver.cc:746] failed to allocate 14.40GiB (15461881856 bytes) from device: CUDA_ERROR_OUT_OF_MEMORY: out of memory
+2024-03-25 14:44:06.092775: I tensorflow/compiler/xla/stream_executor/cuda/cuda_driver.cc:746] failed to allocate 12.96GiB (13915693056 bytes) from device: CUDA_ERROR_OUT_OF_MEMORY: out of memory
+2024-03-25 14:44:15.549747: F ./tensorflow/core/util/gpu_launch_config.h:160] Check failed: work_element_count >= 0 (0 vs. -2147483648)
+/var/spool/slurm/job44947403/slurm_script: line 22: 88711 Aborted                 python train_CNN_on_EMRIs.py
