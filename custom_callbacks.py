@@ -30,7 +30,10 @@ class TestOnNoise(Callback):
             noise_AET= self.generator.noise_td_AET(self.generator.dim, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])#["AE","AE","T"]
             x_test[i,:,:]= self.generator.noise_whiten_AET(noise_AET, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])
         #Reshape the batch of noise samples for input into the model 
-        x_test= xp.reshape(x_test, (self.generator.batch_size, self.generator.dim, self.generator.n_channels)).get()
+        x_test= xp.reshape(x_test, (self.generator.batch_size, self.generator.dim, self.generator.n_channels))#.get()
+
+        #convert input from xp array to TF tensor
+        x_test= self.generator.cupy_to_tensor(x_test)
 
         #Make a prediction with the model, then calculate the corresponding loss
         y_pred= self.model(x_test, training=False)
@@ -43,8 +46,10 @@ class TestOnNoise(Callback):
             3. Take the mean of the squared difference over axis 1
             4. Sum the array of MSEs across the batch'''
 
+        #Convert prediction from TF tensor to xp array
+        y_pred= self.generator.tensor_to_cupy(y_pred)
 
-        batch_loss= np.sum(np.mean((x_test-y_pred.numpy())**2, axis=1))
+        batch_loss= xp.sum(xp.mean((x_test-y_pred)**2, axis=1)).get()
 
         #State and store the losses from these noise samples
         print("Noise loss: ", batch_loss)        
