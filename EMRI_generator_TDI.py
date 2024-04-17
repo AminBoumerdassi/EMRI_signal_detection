@@ -141,8 +141,15 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
             noisy_signal_AET= xp.asarray(waveform)+noise_AET
             X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])
 
-        #Reshape X for the model
-        X= xp.reshape(X, (self.batch_size, self.dim, self.n_channels))#.get()
+        #Standardising inputs to have mean 0, variance 1
+        mu= xp.mean(X, axis=2).reshape(X.shape[0],1,X.shape[1])
+        stdev= xp.std(X, axis=2).reshape(X.shape[0],1,X.shape[1])
+
+        X= (X-mu)/stdev
+
+        #Reshape X and copy X for the model
+        X=  xp.swapaxes(X, 1, 2).copy()#xp.reshape(X, (self.batch_size, self.dim, self.n_channels))#.get()
+
 
         #Convert X from xp arrays to TF tensors
         X= self.cupy_to_tensor(X)
@@ -182,6 +189,25 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         '''
         return self.EMRI_TDI_0PA_ecc(*EMRI_params)#response_wrapper
         
+    def get_TDI_noise(self):
+        '''
+        Generate ONE batch of TDI LISA noise. Not for overlaying on GW events
+        since this is already whitened! More useful for tests involving pure noise.
+
+        Output shape: (batch_size, dim, n_channels)
+        '''
+        #Define the output array
+        batch_TDI_noise= xp.empty((self.batch_size, self.n_channels, self.dim))
+
+        #Iterate noise generation and whitening over one batch
+        for i in range(self.batch_size):
+            noise_AET= self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])
+            #Then whiten
+            batch_TDI_noise[i,:,:]= self.noise_whiten_AET(noise_AET, self.dt, channels=self.channels_dict[self.TDI_channels])
+        #Reshape to have the correct shape for the model
+        batch_TDI_noise= xp.swapaxes(batch_TDI_noise, 1, 2).copy()
+        #batch_TDI_noise= xp.reshape(batch_TDI_noise, (self.batch_size, self.dim, self.n_channels))
+        return batch_TDI_noise
     
     def noise_whiten_AET(self, noisy_signal_td_AET, dt, channels=["AE","AE","T"]):
         '''This is vectorised for the AET channels.
@@ -228,6 +254,7 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         #Declare generator parameters
         print("#################################")
         print("####DATA GENERATOR PARAMETERS####")
+        print("#Dataset size: ", self.EMRI_params_set_size)
         print("#Batch size: ", self.batch_size)
         print("#Time in years:", self.T)
         print("#n_channels: ", self.n_channels)

@@ -21,19 +21,21 @@ class TestOnNoise(Callback):
 
 
         #Initialise an empty array to store noise samples for ONE batch
-        x_test = xp.empty((self.generator.batch_size, self.generator.n_channels, self.generator.dim))
+        #x_test = xp.empty((self.generator.batch_size, self.generator.n_channels, self.generator.dim))
+        x_test= self.generator.get_TDI_noise()
+        y_true = x_test
 
-
-        #Iterate the noise generation and whitening over ONE batch
-        for i in range(self.generator.batch_size):
-            """This noise generation no longer makes sense as our input doesn't have LISA noise"""
-            noise_AET= self.generator.noise_td_AET(self.generator.dim, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])#["AE","AE","T"]
-            x_test[i,:,:]= self.generator.noise_whiten_AET(noise_AET, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])
-        #Reshape the batch of noise samples for input into the model 
-        x_test= xp.reshape(x_test, (self.generator.batch_size, self.generator.dim, self.generator.n_channels))#.get()
+        # #Iterate the noise generation and whitening over ONE batch
+        # for i in range(self.generator.batch_size):
+        #     """This noise generation no longer makes sense as our input doesn't have LISA noise"""
+        #     noise_AET= self.generator.noise_td_AET(self.generator.dim, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])#["AE","AE","T"]
+        #     x_test[i,:,:]= self.generator.noise_whiten_AET(noise_AET, self.generator.dt, channels=self.generator.channels_dict[self.generator.TDI_channels])
+        # #Reshape the batch of noise samples for input into the model 
+        # x_test= xp.reshape(x_test, (self.generator.batch_size, self.generator.dim, self.generator.n_channels))#.get()
 
         #convert input from xp array to TF tensor
         x_test= self.generator.cupy_to_tensor(x_test)
+        #y_true= self.generator.cupy_to_tensor(y_true)
 
         #Make a prediction with the model, then calculate the corresponding loss
         y_pred= self.model(x_test, training=False)
@@ -44,12 +46,13 @@ class TestOnNoise(Callback):
             1. Find the difference between y_true and y_pred
             2. Square that difference
             3. Take the mean of the squared difference over axis 1
-            4. Sum the array of MSEs across the batch'''
+            4. Sum the array of MSEs across the batch
+            5. Divide by the batch size'''
 
         #Convert prediction from TF tensor to xp array
         y_pred= self.generator.tensor_to_cupy(y_pred)
 
-        batch_loss= xp.sum(xp.mean((x_test-y_pred)**2, axis=1)).get()
+        batch_loss= xp.sum(xp.mean((y_true-y_pred)**2, axis=1)).get()/self.generator.batch_size
 
         #State and store the losses from these noise samples
         print("Noise loss: ", batch_loss)        

@@ -3,7 +3,6 @@ This script trains a CNN-autoencoder using the EMRI data generator, records loss
 It also uses some custom callbacks for testing on noise at the end of each epoch.
 '''
 
-
 from EMRI_generator_TDI import EMRIGeneratorTDI
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import LSTM, RepeatVector, Dense, TimeDistributed, Input, Conv1D, Conv1DTranspose, Cropping1D, ZeroPadding1D, Activation
@@ -36,55 +35,53 @@ mixed_precision.set_global_policy('mixed_float16')# "mixed_bfloat16"
 
 
 #Setting generator parameters
-#T is calculated through the choice of dt and the desired length of the timeseries
-len_seq= 2**22
+len_seq= 2**22#2**22 gives around 1.3 years, 2**23 around 2.6 years
 dt=10#10
-T= len_seq*dt/round(YRSID_SI)
+T= len_seq*dt/round(YRSID_SI)#Not actually input into the generator, it already calculates this and stores as an attribute
 TDI_channels="AE"
-
-#Notes on resource-appropriate batch size (it depends on the model size)
-#Max no. on A1001g.5gb: 5 EMRIs, 8 month long
-#Max no. of A100:1 : 5 EMRIs, 8 month long
-#Max no. of A100:2 : 
-
-
-
-batch_size=8#5#on A1001g.5gb, max of 3 1y EMRIs. On A100(40GB), current max of 10(?) 1y EMRIs
-n_channels=len(TDI_channels)#channel 1 is real strain component, channel 2 the imaginary component
+batch_size=8#The code can now handle larger batch sizes like 32 and maybe more
+n_channels=len(TDI_channels)
+add_noise=False#True
 
 #Setting training hyperparameters
-epochs=150#5#0#600#5
+epochs=40#150#5#0#600#5
 
 
-#An empty model
+#Model
+'''
+Ideas for model design:
+
+1. Try very large strides e.g. 256. Will significantly reduce computation.
+Could try very large strides on the 1st layer, then smaller strides for the rest 
+Question is: will it lead to certain frequencies not being picked up (questionable as convolutions look for spatial not time dependencies)
+
+2.
+'''
 model = Sequential()
 model.add(Input(shape=(len_seq,n_channels)))
-model.add(Conv1D(8,kernel_size=128,activation='tanh', strides=4, padding='same'))
-model.add(Conv1D(8,kernel_size=128,activation='tanh', strides=4, padding='same'))
-#model.add(Conv1D(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-#model.add(Conv1D(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-#model.add(Conv1D(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
+model.add(Conv1D(32,kernel_size=128,activation='relu', strides=4, padding='same'))
+model.add(Conv1D(16,kernel_size=128,activation='relu', strides=4, padding='same'))
+model.add(Conv1D(8,kernel_size=128,activation='relu', strides=4, padding='same'))
 
-#model.add(Conv1DTranspose(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-#model.add(Conv1DTranspose(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-#model.add(Conv1DTranspose(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-model.add(Conv1DTranspose(8,kernel_size=128,activation='tanh', strides=4, padding='same'))
-model.add(Conv1DTranspose(8,kernel_size=128,activation='tanh', strides=4, padding='same'))
+model.add(Conv1DTranspose(8,kernel_size=128,activation='relu', strides=4, padding='same'))
+model.add(Conv1DTranspose(16,kernel_size=128,activation='relu', strides=4, padding='same'))
+model.add(Conv1DTranspose(32,kernel_size=128,activation='relu', strides=4, padding='same'))
 model.add(Conv1DTranspose(n_channels,kernel_size=1, strides=1, padding='same'))#this layer may be redundant
+model.add(Conv1DTranspose(n_channels,kernel_size=1, strides=1, padding='same'))#Perhaps this may scale the output?
 model.add(Activation("linear", dtype="float32"))
 
-# model.add(Conv1D(32,kernel_size=32,activation='tanh', strides=1, padding='same'))
-# model.add(Conv1D(16,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1D(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1D(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1D(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
+# '''A high-stride model'''
+# model = Sequential()
+# model.add(Input(shape=(len_seq,n_channels)))
+# model.add(Conv1D(256,kernel_size=256,activation='tanh', strides=64, padding='same'))
+# model.add(Conv1D(128,kernel_size=256,activation='tanh', strides=64, padding='same'))
 
-# model.add(Conv1DTranspose(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1DTranspose(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1DTranspose(8,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1DTranspose(16,kernel_size=32,activation='tanh', strides=2, padding='same'))
-# model.add(Conv1DTranspose(32,kernel_size=32,activation='tanh', strides=1, padding='same'))
-# model.add(Conv1DTranspose(n_channels,kernel_size=1, strides=1, padding='same'))
+# #model.add(Conv1DTranspose(64,kernel_size=256,activation='tanh', strides=64, padding='same'))
+# model.add(Conv1DTranspose(256,kernel_size=256,activation='tanh', strides=64, padding='same'))
+# model.add(Conv1DTranspose(n_channels,kernel_size=256, strides=64, padding='same'))#this layer may be redundant
+# '''In some sources, the final layer of a conv AE is NOT a transpose layer'''
+# model.add(Conv1D(n_channels,kernel_size=256, strides=1, padding='same'))#this layer may be redundant
+
 # model.add(Activation("linear", dtype="float32"))
 
 
@@ -100,11 +97,11 @@ model.add(Activation("linear", dtype="float32"))
 #Choose an optimiser
 #optimizer= Adafactor()
 
-model.compile(optimizer=Adam(), loss="mse")#optimizer="Adam", jit_compile=True
+model.compile(optimizer=Adam(learning_rate=0.0001, gradient_accumulation_steps=2), loss="mse")#optimizer="Adam", jit_compile=True
 model.summary()
 
 #Initialise data generator, and declare its parameters
-training_and_validation_generator= EMRIGeneratorTDI(EMRI_params_dir="training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy", batch_size=batch_size,  dim=len_seq, dt=dt, TDI_channels=TDI_channels)#n_channels=n_channels,
+training_and_validation_generator= EMRIGeneratorTDI(EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy", batch_size=batch_size,  dim=len_seq, dt=dt, TDI_channels=TDI_channels, add_noise=add_noise)#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
 training_and_validation_generator.declare_generator_params()
 
 #Initialise callbacks
@@ -113,7 +110,7 @@ TestOnNoise= TestOnNoise(model, training_and_validation_generator)
 #                                 mode='min', save_best_only=True)
 
 #Train
-history = model.fit(training_and_validation_generator, epochs=epochs, validation_data= training_and_validation_generator, verbose=2, callbacks=[TestOnNoise])#,use_multiprocessing=True, workers=6)
+history = model.fit(training_and_validation_generator, epochs=epochs, validation_data= training_and_validation_generator,  verbose=2)#callbacks=[TestOnNoise],
 
 #Save model
 model.save("model_INSERT_SLURM_ID.keras")
@@ -121,7 +118,7 @@ model.save("model_INSERT_SLURM_ID.keras")
 #Plot losses
 plt.plot(history.epoch, history.history["loss"], "blue", label='Training loss')
 plt.plot(history.epoch, history.history["val_loss"], "orange", label='Validation loss')
-plt.plot(history.epoch, TestOnNoise.losses, "green", label="Noise loss")
+#plt.plot(history.epoch, TestOnNoise.losses, "green", label="Noise loss")
 plt.title('Training loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
