@@ -1,0 +1,253 @@
+
+The following modules were not unloaded:
+   (Use "module --force purge" to unload all):
+
+  1) XALT/minimal   2) slurm   3) NeSI
+2024-04-18 18:36:17.486340: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-04-18 18:36:17.486421: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-04-18 18:36:17.486457: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-04-18 18:36:17.497022: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-04-18 18:36:31.863721: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1886] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38298 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:05:00.0, compute capability: 8.0
+1 Physical GPUs, 1 Logical GPUs
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv1d (Conv1D)             (None, 1048576, 64)       8256      
+                                                                 
+ conv1d_1 (Conv1D)           (None, 131072, 64)        262208    
+                                                                 
+ conv1d_2 (Conv1D)           (None, 16384, 64)         262208    
+                                                                 
+ conv1d_transpose (Conv1DTr  (None, 131072, 64)        262208    
+ anspose)                                                        
+                                                                 
+ conv1d_transpose_1 (Conv1D  (None, 1048576, 64)       262208    
+ Transpose)                                                      
+                                                                 
+ conv1d_transpose_2 (Conv1D  (None, 8388608, 2)        8194      
+ Transpose)                                                      
+                                                                 
+ activation (Activation)     (None, 8388608, 2)        0         
+                                                                 
+=================================================================
+Total params: 1065282 (4.06 MB)
+Trainable params: 1065282 (4.06 MB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#################################
+####DATA GENERATOR PARAMETERS####
+#Dataset size:  11011
+#Batch size:  8
+#Time in years: 2.658143162020893
+#n_channels:  2
+#dt:  10
+#Length of timeseries: 8388608
+Noise background:  False
+#################################
+Epoch 1/100
+2024-04-18 18:37:02.142806: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:442] Loaded cuDNN version 8600
+2024-04-18 18:38:17.514361: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x2ab3f01e2a40 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2024-04-18 18:38:17.514427: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): NVIDIA A100-PCIE-40GB, Compute Capability 8.0
+2024-04-18 18:38:17.653190: I tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+2024-04-18 18:38:18.055648: I ./tensorflow/compiler/jit/device_compiler.h:186] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+10/10 - 143s - loss: 0.7532 - val_loss: 0.7320 - 143s/epoch - 14s/step
+Epoch 2/100
+10/10 - 64s - loss: 0.9152 - val_loss: 0.8765 - 64s/epoch - 6s/step
+Epoch 3/100
+10/10 - 66s - loss: 0.9680 - val_loss: 0.9640 - 66s/epoch - 7s/step
+Epoch 4/100
+10/10 - 65s - loss: 0.8806 - val_loss: 0.7084 - 65s/epoch - 7s/step
+Epoch 5/100
+10/10 - 65s - loss: 0.8290 - val_loss: 0.7851 - 65s/epoch - 6s/step
+Epoch 6/100
+10/10 - 66s - loss: 0.8296 - val_loss: 0.6441 - 66s/epoch - 7s/step
+Epoch 7/100
+10/10 - 64s - loss: 0.6947 - val_loss: 0.6091 - 64s/epoch - 6s/step
+Epoch 8/100
+10/10 - 64s - loss: 0.8888 - val_loss: 0.9707 - 64s/epoch - 6s/step
+Epoch 9/100
+10/10 - 64s - loss: 0.8025 - val_loss: 0.6667 - 64s/epoch - 6s/step
+Epoch 10/100
+10/10 - 64s - loss: 0.6502 - val_loss: 0.6612 - 64s/epoch - 6s/step
+Epoch 11/100
+10/10 - 63s - loss: 0.8495 - val_loss: 0.6554 - 63s/epoch - 6s/step
+Epoch 12/100
+10/10 - 66s - loss: 0.7013 - val_loss: 0.7898 - 66s/epoch - 7s/step
+Epoch 13/100
+10/10 - 63s - loss: 0.7080 - val_loss: 0.8727 - 63s/epoch - 6s/step
+Epoch 14/100
+10/10 - 65s - loss: 0.6408 - val_loss: 0.6859 - 65s/epoch - 7s/step
+Epoch 15/100
+10/10 - 65s - loss: 0.6420 - val_loss: 0.8775 - 65s/epoch - 7s/step
+Epoch 16/100
+10/10 - 65s - loss: 0.6451 - val_loss: 0.7690 - 65s/epoch - 7s/step
+Epoch 17/100
+10/10 - 62s - loss: 0.6936 - val_loss: 0.7439 - 62s/epoch - 6s/step
+Epoch 18/100
+10/10 - 64s - loss: 0.6133 - val_loss: 0.7718 - 64s/epoch - 6s/step
+Epoch 19/100
+10/10 - 64s - loss: 0.9067 - val_loss: 0.7691 - 64s/epoch - 6s/step
+Epoch 20/100
+10/10 - 65s - loss: 0.5985 - val_loss: 0.8184 - 65s/epoch - 7s/step
+Epoch 21/100
+10/10 - 63s - loss: 0.6465 - val_loss: 0.5688 - 63s/epoch - 6s/step
+Epoch 22/100
+10/10 - 63s - loss: 0.7792 - val_loss: 0.8091 - 63s/epoch - 6s/step
+Epoch 23/100
+10/10 - 63s - loss: 0.7599 - val_loss: 0.7491 - 63s/epoch - 6s/step
+Epoch 24/100
+10/10 - 65s - loss: 0.6705 - val_loss: 0.8074 - 65s/epoch - 6s/step
+Epoch 25/100
+10/10 - 63s - loss: 0.8075 - val_loss: 0.6621 - 63s/epoch - 6s/step
+Epoch 26/100
+10/10 - 63s - loss: 0.7136 - val_loss: 0.7013 - 63s/epoch - 6s/step
+Epoch 27/100
+10/10 - 64s - loss: 0.5344 - val_loss: 0.7945 - 64s/epoch - 6s/step
+Epoch 28/100
+10/10 - 66s - loss: 0.6799 - val_loss: 0.9036 - 66s/epoch - 7s/step
+Epoch 29/100
+10/10 - 65s - loss: 0.7216 - val_loss: 0.6619 - 65s/epoch - 7s/step
+Epoch 30/100
+10/10 - 64s - loss: 0.6570 - val_loss: 0.6236 - 64s/epoch - 6s/step
+Epoch 31/100
+10/10 - 64s - loss: 0.6836 - val_loss: 0.7577 - 64s/epoch - 6s/step
+Epoch 32/100
+10/10 - 65s - loss: 0.6078 - val_loss: 0.4750 - 65s/epoch - 6s/step
+Epoch 33/100
+10/10 - 63s - loss: 0.5704 - val_loss: 0.5227 - 63s/epoch - 6s/step
+Epoch 34/100
+10/10 - 63s - loss: 0.5576 - val_loss: 0.4859 - 63s/epoch - 6s/step
+Epoch 35/100
+10/10 - 65s - loss: 0.5868 - val_loss: 0.6138 - 65s/epoch - 7s/step
+Epoch 36/100
+10/10 - 63s - loss: 0.5874 - val_loss: 0.6518 - 63s/epoch - 6s/step
+Epoch 37/100
+10/10 - 64s - loss: 0.5854 - val_loss: 0.5420 - 64s/epoch - 6s/step
+Epoch 38/100
+10/10 - 64s - loss: 0.6176 - val_loss: 0.5590 - 64s/epoch - 6s/step
+Epoch 39/100
+10/10 - 62s - loss: 0.5205 - val_loss: 0.4981 - 62s/epoch - 6s/step
+Epoch 40/100
+10/10 - 62s - loss: 0.5961 - val_loss: 0.5516 - 62s/epoch - 6s/step
+Epoch 41/100
+10/10 - 66s - loss: 0.5195 - val_loss: 0.6888 - 66s/epoch - 7s/step
+Epoch 42/100
+10/10 - 65s - loss: 0.5504 - val_loss: 0.4197 - 65s/epoch - 6s/step
+Epoch 43/100
+10/10 - 63s - loss: 0.5245 - val_loss: 0.5015 - 63s/epoch - 6s/step
+Epoch 44/100
+10/10 - 66s - loss: 0.4956 - val_loss: 0.5804 - 66s/epoch - 7s/step
+Epoch 45/100
+10/10 - 65s - loss: 0.3964 - val_loss: 0.4356 - 65s/epoch - 7s/step
+Epoch 46/100
+10/10 - 64s - loss: 0.4999 - val_loss: 0.4718 - 64s/epoch - 6s/step
+Epoch 47/100
+10/10 - 64s - loss: 0.6033 - val_loss: 0.6106 - 64s/epoch - 6s/step
+Epoch 48/100
+10/10 - 66s - loss: 0.4522 - val_loss: 0.5027 - 66s/epoch - 7s/step
+Epoch 49/100
+10/10 - 65s - loss: 0.5124 - val_loss: 0.6155 - 65s/epoch - 7s/step
+Epoch 50/100
+10/10 - 64s - loss: 0.4506 - val_loss: 0.4416 - 64s/epoch - 6s/step
+Epoch 51/100
+10/10 - 66s - loss: 0.4802 - val_loss: 0.3859 - 66s/epoch - 7s/step
+Epoch 52/100
+10/10 - 67s - loss: 0.4455 - val_loss: 0.4695 - 67s/epoch - 7s/step
+Epoch 53/100
+10/10 - 62s - loss: 0.5243 - val_loss: 0.5033 - 62s/epoch - 6s/step
+Epoch 54/100
+10/10 - 62s - loss: 0.4351 - val_loss: 0.4005 - 62s/epoch - 6s/step
+Epoch 55/100
+10/10 - 66s - loss: 0.4995 - val_loss: 0.3971 - 66s/epoch - 7s/step
+Epoch 56/100
+10/10 - 63s - loss: 0.4329 - val_loss: 0.4390 - 63s/epoch - 6s/step
+Epoch 57/100
+10/10 - 66s - loss: 0.5483 - val_loss: 0.5443 - 66s/epoch - 7s/step
+Epoch 58/100
+10/10 - 66s - loss: 0.5149 - val_loss: 0.5057 - 66s/epoch - 7s/step
+Epoch 59/100
+10/10 - 66s - loss: 0.5320 - val_loss: 0.4550 - 66s/epoch - 7s/step
+Epoch 60/100
+10/10 - 65s - loss: 0.3650 - val_loss: 0.4155 - 65s/epoch - 6s/step
+Epoch 61/100
+10/10 - 65s - loss: 0.5758 - val_loss: 0.3572 - 65s/epoch - 7s/step
+Epoch 62/100
+10/10 - 65s - loss: 0.4799 - val_loss: 0.4532 - 65s/epoch - 7s/step
+Epoch 63/100
+10/10 - 68s - loss: 0.5420 - val_loss: 0.5320 - 68s/epoch - 7s/step
+Epoch 64/100
+10/10 - 66s - loss: 0.4685 - val_loss: 0.4196 - 66s/epoch - 7s/step
+Epoch 65/100
+10/10 - 65s - loss: 0.4290 - val_loss: 0.5234 - 65s/epoch - 6s/step
+Epoch 66/100
+10/10 - 65s - loss: 0.3236 - val_loss: 0.4460 - 65s/epoch - 7s/step
+Epoch 67/100
+10/10 - 64s - loss: 0.4071 - val_loss: 0.4301 - 64s/epoch - 6s/step
+Epoch 68/100
+10/10 - 66s - loss: 0.4526 - val_loss: 0.3370 - 66s/epoch - 7s/step
+Epoch 69/100
+10/10 - 66s - loss: 0.4963 - val_loss: 0.4349 - 66s/epoch - 7s/step
+Epoch 70/100
+10/10 - 65s - loss: 0.4215 - val_loss: 0.4157 - 65s/epoch - 6s/step
+Epoch 71/100
+10/10 - 66s - loss: 0.4406 - val_loss: 0.3652 - 66s/epoch - 7s/step
+Epoch 72/100
+10/10 - 65s - loss: 0.3614 - val_loss: 0.4194 - 65s/epoch - 7s/step
+Epoch 73/100
+10/10 - 64s - loss: 0.5024 - val_loss: 0.5554 - 64s/epoch - 6s/step
+Epoch 74/100
+10/10 - 67s - loss: 0.4739 - val_loss: 0.5187 - 67s/epoch - 7s/step
+Epoch 75/100
+10/10 - 65s - loss: 0.4961 - val_loss: 0.4480 - 65s/epoch - 7s/step
+Epoch 76/100
+10/10 - 65s - loss: 0.4647 - val_loss: 0.4686 - 65s/epoch - 6s/step
+Epoch 77/100
+10/10 - 66s - loss: 0.4018 - val_loss: 0.4755 - 66s/epoch - 7s/step
+Epoch 78/100
+10/10 - 65s - loss: 0.3770 - val_loss: 0.4309 - 65s/epoch - 6s/step
+Epoch 79/100
+10/10 - 66s - loss: 0.4054 - val_loss: 0.5106 - 66s/epoch - 7s/step
+Epoch 80/100
+10/10 - 65s - loss: 0.4672 - val_loss: 0.5022 - 65s/epoch - 6s/step
+Epoch 81/100
+10/10 - 63s - loss: 0.3715 - val_loss: 0.4799 - 63s/epoch - 6s/step
+Epoch 82/100
+10/10 - 66s - loss: 0.4337 - val_loss: 0.5670 - 66s/epoch - 7s/step
+Epoch 83/100
+10/10 - 66s - loss: 0.3685 - val_loss: 0.4484 - 66s/epoch - 7s/step
+Epoch 84/100
+10/10 - 63s - loss: 0.4545 - val_loss: 0.4030 - 63s/epoch - 6s/step
+Epoch 85/100
+10/10 - 65s - loss: 0.3782 - val_loss: 0.4184 - 65s/epoch - 7s/step
+Epoch 86/100
+10/10 - 66s - loss: 0.4595 - val_loss: 0.4234 - 66s/epoch - 7s/step
+Epoch 87/100
+10/10 - 67s - loss: 0.5134 - val_loss: 0.4629 - 67s/epoch - 7s/step
+Epoch 88/100
+10/10 - 67s - loss: 0.4612 - val_loss: 0.4457 - 67s/epoch - 7s/step
+Epoch 89/100
+10/10 - 65s - loss: 0.4819 - val_loss: 0.4565 - 65s/epoch - 6s/step
+Epoch 90/100
+10/10 - 64s - loss: 0.4399 - val_loss: 0.4593 - 64s/epoch - 6s/step
+Epoch 91/100
+10/10 - 66s - loss: 0.4564 - val_loss: 0.4815 - 66s/epoch - 7s/step
+Epoch 92/100
+10/10 - 65s - loss: 0.3515 - val_loss: 0.4927 - 65s/epoch - 6s/step
+Epoch 93/100
+10/10 - 65s - loss: 0.4186 - val_loss: 0.4826 - 65s/epoch - 7s/step
+Epoch 94/100
+10/10 - 66s - loss: 0.3563 - val_loss: 0.4861 - 66s/epoch - 7s/step
+Epoch 95/100
+10/10 - 63s - loss: 0.3897 - val_loss: 0.4144 - 63s/epoch - 6s/step
+Epoch 96/100
+10/10 - 65s - loss: 0.4507 - val_loss: 0.4315 - 65s/epoch - 7s/step
+Epoch 97/100
+10/10 - 66s - loss: 0.4059 - val_loss: 0.3674 - 66s/epoch - 7s/step
+Epoch 98/100
+10/10 - 66s - loss: 0.5213 - val_loss: 0.3512 - 66s/epoch - 7s/step
+Epoch 99/100
+10/10 - 66s - loss: 0.3977 - val_loss: 0.4759 - 66s/epoch - 7s/step
+Epoch 100/100
+10/10 - 66s - loss: 0.4817 - val_loss: 0.4646 - 66s/epoch - 7s/step

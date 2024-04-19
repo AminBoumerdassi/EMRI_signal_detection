@@ -142,8 +142,8 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
             X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])
 
         #Standardising inputs to have mean 0, variance 1
-        mu= xp.mean(X, axis=2).reshape(X.shape[0],1,X.shape[1])
-        stdev= xp.std(X, axis=2).reshape(X.shape[0],1,X.shape[1])
+        mu= xp.mean(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        stdev= xp.std(X, axis=2).reshape(X.shape[0],X.shape[1],1)
 
         X= (X-mu)/stdev
 

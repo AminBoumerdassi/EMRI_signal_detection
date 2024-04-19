@@ -44,7 +44,7 @@ n_channels=len(TDI_channels)
 add_noise=False#True
 
 #Setting training hyperparameters
-epochs=40#150#5#0#600#5
+epochs=100#40#150#5#0#600#5
 
 
 #Model

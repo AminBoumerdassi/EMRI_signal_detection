@@ -37,9 +37,9 @@ if gpus:
 model_dir= "model_INSERT_SLURM_ID.keras"
 
 #Specify EMRI generator params
-EMRI_params_dir="training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
-val_dataset_size= 3
-batch_size=3#8#This needs to be such that val_dataset_size/batch_size is evenly divisible
+EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy"#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
+val_dataset_size= 4
+batch_size=4#This needs to be such that val_dataset_size/batch_size is evenly divisible
 dim=2**23#22
 TDI_channels="AE"
 dt=10
@@ -67,50 +67,92 @@ y_true_noise =  np.zeros(np.shape(X_EMRIs))#Not whitened but I guess it doesn't 
 
 #Make predictions with the model
 y_pred_EMRIs= model.predict(X_EMRIs)
-y_pred_noise= model.predict(X_noise)
+#y_pred_noise= model.predict(X_noise)
 
 #Calculate the reconstruction error between y true and y pred
 '''Reconstructions are not the same as reconstruction errors!'''
 #reconstruction_error_EMRI = np.mean(np.square(y_pred_EMRIs - y_true_EMRIs), axis=1)
 #reconstruction_error_noise = np.mean(np.square(y_pred_noise - y_true_noise), axis=1)
 
-#Plot the Y true, Y predicted, and residuals (may not be the same as the reconstruction error)
+#Plot the Y true, Y predicted, and residuals
 '''Do something like 2 rows, 3 columns. Row 1 is for the A channel, row 2 the E channel'''
-fig, axs= plt.subplots(nrows=4, ncols=2)#(ax1, ax2, ax3, ax4, ax5, ax6)
+ncols=batch_size
+fig, axs= plt.subplots(nrows=3, ncols=ncols, sharex=True)#(ax1, ax2, ax3, ax4, ax5, ax6)
 
 t= np.linspace(0, validation_data_generator.T, num=validation_data_generator.dim)
 
-#Plot the EMRI reconstructions in the A/E channels
-axs[0,0].plot(t, X_EMRIs[0,:,0], "purple", label="True noisy EMRI")
-axs[1,0].plot(t, y_pred_EMRIs[0,:,0],"g", label="Denoised EMRI")
-axs[2,0].plot(t, y_true_EMRIs[0,:,0], "b", label="True noiseless EMRI")
-axs[3,0].plot(t, y_true_EMRIs[0,:,0]-y_pred_EMRIs[0,:,0], "r--",label="Residual")# y_pred_EMRIs[0,:,0]-y_true_EMRIs[0,:,0]
-         
-#axs[1,0].plot(t, y_true_EMRIs[0,:,1], label="True EMRI")
-#axs[1,0].plot(t, y_pred_EMRIs[0,:,1], label="Denoised EMRI")
-#axs[1,0].plot(t, y_pred_EMRIs[0,:,1]-y_true_EMRIs[0,:,1], label="Residual")
-#axs[1,0].legend()
+#Plot inputs, predictions and residuals for each column of the subplot
+for col in range(ncols):#subplot, axs.flatten()
+  axs[0,col].plot(t, X_EMRIs[col,:,0], "purple", label="True EMRI")
+  axs[1,col].plot(t, y_pred_EMRIs[col,:,0], "b", label="Pred. EMRI")
+  axs[2,col].plot(t, y_pred_EMRIs[col,:,0]-X_EMRIs[col,:,0], "r", label="Residual")
 
-#Plot the LISA noise reconstructions in the A and E channels
-axs[0,1].plot(t, X_noise[0,:,0], "purple", label="True LISA noise")
-axs[1,1].plot(t, y_pred_noise[0,:,0],"g", label="Denoised noise")
-axs[2,1].plot(t, y_true_noise[0,:,0], "b", label="True denoised noise")
-axs[3,1].plot(t, y_true_noise[0,:,0]-y_pred_noise[0,:,0], "r", label="Residual")
-         
-# axs[1,1].plot(t, y_true_noise[0,:,1], label="LISA noise")
-# axs[1,1].plot(t, y_pred_noise[0,:,1], label="Denoised noise")
-# axs[1,1].plot(t, y_pred_noise[0,:,1]-y_true_noise[0,:,1], label="Residual")
-# axs[1,1].legend()
-
-         
-#And label the subplots
-fig.suptitle('Looking at TDI A')
-axs[0,0].set(ylabel="Input", title="Reconstructing EMRIs")
+# #And label the subplots
+fig.suptitle('EMRI reconstructions in TDI A, SNRs [60,100]')
+axs[0,0].set(ylabel="Input")
 axs[1,0].set(ylabel="Prediction")
-axs[2,0].set(ylabel="True output")
-axs[3,0].set(ylabel="Residual")
-axs[0,1].set(title="Reconstructing noise")
-axs[3,0].set(xlabel="Time, years")
+axs[-1,0].set(xlabel="Time, years", ylabel="Residual")
+
+
+
+
+# #Plot 6 inputs in the A channel
+# ax1.plot(t, X_EMRIs[0,:,0], "purple", label="True EMRI")
+# ax2.plot(t, X_EMRIs[1,:,0], "purple", label="True EMRI")
+# ax3.plot(t, X_EMRIs[2,:,0], "purple", label="True EMRI")
+# ax4.plot(t, X_EMRIs[3,:,0], "purple", label="True EMRI")
+# ax5.plot(t, X_EMRIs[4,:,0], "purple", label="True EMRI")
+# ax6.plot(t, X_EMRIs[5,:,0], "purple", label="True EMRI")
+
+# #Plot 6 predictions in the A channel
+# ax1.plot(t, y_pred_EMRIs[0,:,0], "g", label="Pred. EMRI")
+# ax2.plot(t, y_pred_EMRIs[1,:,0], "g", label="True EMRI")
+# ax3.plot(t, y_pred_EMRIs[2,:,0], "g", label="True EMRI")
+# ax4.plot(t, y_pred_EMRIs[3,:,0], "g", label="True EMRI")
+# ax5.plot(t, y_pred_EMRIs[4,:,0], "g", label="True EMRI")
+# ax6.plot(t, y_pred_EMRIs[5,:,0], "g", label="True EMRI")
+
+# #Plot 6 residuals in the A channel
+# ax1.plot(t, y_pred_EMRIs[0,:,0]-X_EMRIs[0,:,0], "g", label="Pred. EMRI")
+# ax2.plot(t, y_pred_EMRIs[1,:,0], "g", label="True EMRI")
+# ax3.plot(t, y_pred_EMRIs[2,:,0], "g", label="True EMRI")
+# ax4.plot(t, y_pred_EMRIs[3,:,0], "g", label="True EMRI")
+# ax5.plot(t, y_pred_EMRIs[4,:,0], "g", label="True EMRI")
+# ax6.plot(t, y_pred_EMRIs[5,:,0], "g", label="True EMRI")
+
+
+
+# #Plot the EMRI reconstructions in the A/E channels
+# axs[0,0].plot(t, X_EMRIs[0,:,0], "purple", label="True noisy EMRI")
+# axs[1,0].plot(t, y_pred_EMRIs[0,:,0],"g", label="Denoised EMRI")
+# axs[2,0].plot(t, y_true_EMRIs[0,:,0], "b", label="True noiseless EMRI")
+# axs[3,0].plot(t, y_true_EMRIs[0,:,0]-y_pred_EMRIs[0,:,0], "r--",label="Residual")# y_pred_EMRIs[0,:,0]-y_true_EMRIs[0,:,0]
+         
+# #axs[1,0].plot(t, y_true_EMRIs[0,:,1], label="True EMRI")
+# #axs[1,0].plot(t, y_pred_EMRIs[0,:,1], label="Denoised EMRI")
+# #axs[1,0].plot(t, y_pred_EMRIs[0,:,1]-y_true_EMRIs[0,:,1], label="Residual")
+# #axs[1,0].legend()
+
+# #Plot the LISA noise reconstructions in the A and E channels
+# axs[0,1].plot(t, X_noise[0,:,0], "purple", label="True LISA noise")
+# axs[1,1].plot(t, y_pred_noise[0,:,0],"g", label="Denoised noise")
+# axs[2,1].plot(t, y_true_noise[0,:,0], "b", label="True denoised noise")
+# axs[3,1].plot(t, y_true_noise[0,:,0]-y_pred_noise[0,:,0], "r", label="Residual")
+         
+# # axs[1,1].plot(t, y_true_noise[0,:,1], label="LISA noise")
+# # axs[1,1].plot(t, y_pred_noise[0,:,1], label="Denoised noise")
+# # axs[1,1].plot(t, y_pred_noise[0,:,1]-y_true_noise[0,:,1], label="Residual")
+# # axs[1,1].legend()
+
+         
+# #And label the subplots
+# fig.suptitle('Looking at TDI A')
+# axs[0,0].set(ylabel="Input", title="Reconstructing EMRIs")
+# axs[1,0].set(ylabel="Prediction")
+# axs[2,0].set(ylabel="True output")
+# axs[3,0].set(ylabel="Residual")
+# axs[0,1].set(title="Reconstructing noise")
+# axs[3,0].set(xlabel="Time, years")
 
 plt.savefig("testing_data_reconstructions.png")
 
