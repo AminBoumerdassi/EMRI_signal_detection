@@ -85,7 +85,7 @@ t= np.linspace(0, validation_data_generator.T, num=validation_data_generator.dim
 for col in range(ncols):#subplot, axs.flatten()
   axs[0,col].plot(t, X_EMRIs[col,:,0], "purple", label="True EMRI")
   axs[1,col].plot(t, y_pred_EMRIs[col,:,0], "b", label="Pred. EMRI")
-  axs[2,col].plot(t, y_pred_EMRIs[col,:,0]-X_EMRIs[col,:,0], "r", label="Residual")
+  axs[2,col].plot(t, X_EMRIs[col,:,0]-y_pred_EMRIs[col,:,0], "r", label="Residual")
 
 # #And label the subplots
 fig.suptitle('EMRI reconstructions in TDI A, SNRs [60,100]')

@@ -1,0 +1,119 @@
+
+The following modules were not unloaded:
+   (Use "module --force purge" to unload all):
+
+  1) XALT/minimal   2) slurm   3) NeSI
+2024-04-24 00:57:06.643809: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-04-24 00:57:06.643898: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-04-24 00:57:06.643952: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-04-24 00:57:06.656751: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-04-24 00:57:16.152769: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1886] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38298 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:83:00.0, compute capability: 8.0
+1 Physical GPUs, 1 Logical GPUs
+#################################
+####DATA GENERATOR PARAMETERS####
+#Dataset size:  11011
+#Batch size:  8
+#Time in years: 2.658143162020893
+#n_channels:  2
+#dt:  10
+#Length of timeseries: 8388608
+Noise background:  False
+#################################
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv1d (Conv1D)             (None, 1048576, 64)       8256      
+                                                                 
+ conv1d_1 (Conv1D)           (None, 131072, 64)        262208    
+                                                                 
+ conv1d_2 (Conv1D)           (None, 16384, 64)         262208    
+                                                                 
+ conv1d_transpose (Conv1DTr  (None, 131072, 64)        262208    
+ anspose)                                                        
+                                                                 
+ conv1d_transpose_1 (Conv1D  (None, 1048576, 64)       262208    
+ Transpose)                                                      
+                                                                 
+ conv1d_transpose_2 (Conv1D  (None, 8388608, 2)        8194      
+ Transpose)                                                      
+                                                                 
+ activation (Activation)     (None, 8388608, 2)        0         
+                                                                 
+=================================================================
+Total params: 1065282 (4.06 MB)
+Trainable params: 1065282 (4.06 MB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+Epoch 1/100
+2024-04-24 00:57:54.419770: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:442] Loaded cuDNN version 8600
+2024-04-24 00:59:10.823667: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x2ab3ee511c80 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2024-04-24 00:59:10.823736: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): NVIDIA A100-PCIE-40GB, Compute Capability 8.0
+2024-04-24 00:59:10.854215: I tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+2024-04-24 00:59:11.445691: I ./tensorflow/compiler/jit/device_compiler.h:186] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+10/10 - 167s - loss: 1.4373e-07 - val_loss: 9.6592e-08 - 167s/epoch - 17s/step
+Epoch 2/100
+10/10 - 90s - loss: 9.8541e-08 - val_loss: 8.1683e-08 - 90s/epoch - 9s/step
+Epoch 3/100
+10/10 - 90s - loss: 9.2194e-08 - val_loss: 1.0553e-07 - 90s/epoch - 9s/step
+Epoch 4/100
+10/10 - 90s - loss: 4.9470e-08 - val_loss: 4.9480e-08 - 90s/epoch - 9s/step
+Epoch 5/100
+10/10 - 90s - loss: 1.4687e-07 - val_loss: 1.6351e-07 - 90s/epoch - 9s/step
+Epoch 6/100
+10/10 - 73s - loss: 1.3075e-07 - val_loss: 1.3793e-07 - 73s/epoch - 7s/step
+Epoch 7/100
+10/10 - 71s - loss: 5.7082e-08 - val_loss: 7.3291e-08 - 71s/epoch - 7s/step
+Epoch 8/100
+10/10 - 72s - loss: 1.2386e-07 - val_loss: 1.5160e-07 - 72s/epoch - 7s/step
+Epoch 9/100
+10/10 - 71s - loss: 1.0044e-06 - val_loss: 1.1545e-06 - 71s/epoch - 7s/step
+Epoch 10/100
+10/10 - 72s - loss: 1.2107e-07 - val_loss: 1.4177e-07 - 72s/epoch - 7s/step
+Epoch 11/100
+10/10 - 71s - loss: 9.4529e-08 - val_loss: 8.3947e-08 - 71s/epoch - 7s/step
+Epoch 12/100
+10/10 - 73s - loss: 1.6650e-07 - val_loss: 2.3251e-07 - 73s/epoch - 7s/step
+Epoch 13/100
+10/10 - 71s - loss: 1.0159e-07 - val_loss: 1.2364e-07 - 71s/epoch - 7s/step
+Epoch 14/100
+10/10 - 74s - loss: 1.0916e-07 - val_loss: 1.0767e-07 - 74s/epoch - 7s/step
+Epoch 15/100
+10/10 - 74s - loss: 1.2322e-07 - val_loss: 1.9586e-07 - 74s/epoch - 7s/step
+Epoch 16/100
+10/10 - 74s - loss: 4.2172e-07 - val_loss: 4.1506e-07 - 74s/epoch - 7s/step
+Epoch 17/100
+10/10 - 70s - loss: 1.2969e-07 - val_loss: 1.3262e-07 - 70s/epoch - 7s/step
+Epoch 18/100
+10/10 - 73s - loss: 2.4779e-06 - val_loss: 1.4975e-07 - 73s/epoch - 7s/step
+Epoch 19/100
+10/10 - 81s - loss: 1.3775e-07 - val_loss: 8.5410e-08 - 81s/epoch - 8s/step
+Epoch 20/100
+10/10 - 83s - loss: 2.6494e-06 - val_loss: 2.6149e-06 - 83s/epoch - 8s/step
+Epoch 21/100
+10/10 - 71s - loss: 1.3533e-07 - val_loss: 1.7940e-07 - 71s/epoch - 7s/step
+Epoch 22/100
+10/10 - 72s - loss: 1.0842e-07 - val_loss: 1.2346e-07 - 72s/epoch - 7s/step
+Epoch 23/100
+10/10 - 71s - loss: 1.1022e-07 - val_loss: 1.4422e-07 - 71s/epoch - 7s/step
+Epoch 24/100
+10/10 - 73s - loss: 2.6444e-07 - val_loss: 2.3907e-07 - 73s/epoch - 7s/step
+Epoch 25/100
+10/10 - 71s - loss: 2.0285e-07 - val_loss: 1.1046e-07 - 71s/epoch - 7s/step
+Epoch 26/100
+10/10 - 71s - loss: 1.3657e-07 - val_loss: 1.2159e-07 - 71s/epoch - 7s/step
+Epoch 27/100
+10/10 - 72s - loss: 1.2375e-07 - val_loss: 1.3615e-07 - 72s/epoch - 7s/step
+Epoch 28/100
+10/10 - 74s - loss: 9.1386e-08 - val_loss: 8.7498e-08 - 74s/epoch - 7s/step
+Epoch 29/100
+10/10 - 74s - loss: 1.7692e-07 - val_loss: 1.2865e-07 - 74s/epoch - 7s/step
+Epoch 30/100
+10/10 - 72s - loss: 1.3633e-07 - val_loss: 1.4683e-07 - 72s/epoch - 7s/step
+Epoch 31/100
+10/10 - 73s - loss: 3.2625e-06 - val_loss: 1.4863e-07 - 73s/epoch - 7s/step
+Epoch 32/100
+10/10 - 75s - loss: 1.2246e-07 - val_loss: 1.4986e-07 - 75s/epoch - 8s/step
+Epoch 33/100
+slurmstepd: error: *** JOB 45816708 ON wbl002 CANCELLED AT 2024-04-23T13:40:19 ***
