@@ -141,15 +141,52 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
             noisy_signal_AET= xp.asarray(waveform)+noise_AET
             X[batch_index,:,:]= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])
 
-        #Standardising inputs to have mean 0, variance 1
-        mu= xp.mean(X, axis=2).reshape(X.shape[0],X.shape[1],1)
-        stdev= xp.std(X, axis=2).reshape(X.shape[0],X.shape[1],1)
 
-        X= (X-mu)/stdev
+        '''Some EMRI stats for normalisation:
+            Max stdev= [0.04, 0.04]
+            Median stdev= [0.004, 0.004]
+
+        '''
+        #Standardising inputs to have mean 0, variance 1
+        '''mu= xp.mean(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        stdev= xp.std(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        X= (X-mu)/stdev'''
+
+        #Or min-max scaling inputs to be between [-1,1]
+        '''max_X= xp.amax(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        min_X= xp.amin(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        X= -1+(((X-min_X)*(2))/(max_X-min_X))'''
+
+        #Or min-max scaling inputs to be between [0,1]
+        '''max_X= xp.amax(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        min_X= xp.amin(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        X= ((X-min_X)/(max_X-min_X))'''
+
+        #Or feature-wise standardisation
+        '''mu= xp.mean(X, axis=(0,1))#.reshape(X.shape[0],X.shape[1],1)
+        stdev= xp.std(X, axis=(0,1))#.reshape(X.shape[0],X.shape[1],1)
+        X= (X-mu)/stdev'''
+
+        #Feature-wise normalisation based on the max-absolute of the dataset
+        #Maxima in the A and E chans: [13.72, 22.64]
+        #Minima in the A and E chans: [-15.99, -15.05]'''
+        '''max_abs= xp.array([15.99,22.647]).reshape(2,1)
+        X= X/max_abs'''
+        
+        #Feature-wise standardisation based on max stdev
+        '''mu= 0#xp.mean(X, axis=2).reshape(X.shape[0],X.shape[1],1)
+        stdev= 0.004
+        X= (X-mu)/stdev'''
+
+
+        #Feature clipping our data
+        #clipping the strains to be no larger than the 80th percentile of the maxima recorded in each EMRI
+        #80th percentile was at ~0.1
+        X= xp.clip(X, -0.1, 0.1)
+
 
         #Reshape X and copy X for the model
         X=  xp.swapaxes(X, 1, 2).copy()#xp.reshape(X, (self.batch_size, self.dim, self.n_channels))#.get()
-
 
         #Convert X from xp arrays to TF tensors
         X= self.cupy_to_tensor(X)

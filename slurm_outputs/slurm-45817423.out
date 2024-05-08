@@ -1,0 +1,61 @@
+
+The following modules were not unloaded:
+   (Use "module --force purge" to unload all):
+
+  1) XALT/minimal   2) slurm   3) NeSI
+2024-04-24 01:54:33.811170: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-04-24 01:54:33.811242: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-04-24 01:54:33.811280: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-04-24 01:54:33.823888: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-04-24 01:54:38.227643: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1886] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38298 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:83:00.0, compute capability: 8.0
+1 Physical GPUs, 1 Logical GPUs
+#################################
+####DATA GENERATOR PARAMETERS####
+#Dataset size:  11011
+#Batch size:  8
+#Time in years: 2.658143162020893
+#n_channels:  2
+#dt:  10
+#Length of timeseries: 8388608
+Noise background:  False
+#################################
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv1d (Conv1D)             (None, 1048576, 64)       8256      
+                                                                 
+ conv1d_1 (Conv1D)           (None, 131072, 64)        262208    
+                                                                 
+ conv1d_2 (Conv1D)           (None, 16384, 64)         262208    
+                                                                 
+ conv1d_transpose (Conv1DTr  (None, 131072, 64)        262208    
+ anspose)                                                        
+                                                                 
+ conv1d_transpose_1 (Conv1D  (None, 1048576, 64)       262208    
+ Transpose)                                                      
+                                                                 
+ conv1d_transpose_2 (Conv1D  (None, 8388608, 2)        8194      
+ Transpose)                                                      
+                                                                 
+ activation (Activation)     (None, 8388608, 2)        0         
+                                                                 
+=================================================================
+Total params: 1065282 (4.06 MB)
+Trainable params: 1065282 (4.06 MB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+Traceback (most recent call last):
+  File "/scale_wlg_persistent/filesets/project/uoa00195/EMRI_generation/EMRI_signal_detection/train_CNN_on_EMRIs.py", line 82, in <module>
+    history = model.fit(training_and_validation_generator, epochs=epochs, validation_data= training_and_validation_generator,  verbose=2)#callbacks=[TestOnNoise],
+  File "/nesi/project/uoa00195/conda_envs/few_env_py3_10/lib/python3.10/site-packages/keras/src/utils/traceback_utils.py", line 70, in error_handler
+    raise e.with_traceback(filtered_tb) from None
+  File "/scale_wlg_persistent/filesets/project/uoa00195/EMRI_generation/EMRI_signal_detection/EMRI_generator_TDI.py", line 118, in __getitem__
+    X, y = self.__data_generation(indexes)#list_IDs_temp
+  File "/scale_wlg_persistent/filesets/project/uoa00195/EMRI_generation/EMRI_signal_detection/EMRI_generator_TDI.py", line 172, in __data_generation
+    X= X/max_abs
+  File "cupy/_core/core.pyx", line 1310, in cupy._core.core._ndarray_base.__truediv__
+  File "cupy/_core/_kernel.pyx", line 1316, in cupy._core._kernel.ufunc.__call__
+  File "cupy/_core/internal.pyx", line 382, in cupy._core.internal._broadcast_core
+ValueError: operands could not be broadcast together with shapes (8, 2, 8388608) (2,)
