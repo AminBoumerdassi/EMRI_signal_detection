@@ -69,7 +69,7 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         # order of the langrangian interpolation
         t0 = 20000.0   # How many samples to remove from start and end of simulations
         order = 25
-        orbit_file_esa = "/nesi/project/uoa00195/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"
+        orbit_file_esa = "../../../../fred/oz303/aboumerd/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"##"/nesi/project/uoa00195/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"
         orbit_kwargs_esa = dict(orbit_file=orbit_file_esa) # these are the orbit files that you will have cloned if you are using Michaels code.
         # you do not need to generate them yourself. They’re already generated. 
 
@@ -211,7 +211,7 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         freq = xp.fft.rfftfreq(N_padded , dt)
         freq[0] = freq[1]#avoids NaNs in PSD[0]
         
-        PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn="noisepsd_"+channel, return_type="PSD") for channel in channels])
+        PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn=A1TDISens, return_type="PSD") for channel in channels])#"noisepsd_"+channel
 
         #Draw samples from multivariate Gaussian
         variance_noise_f= N*PSD_AET/(4*dt)
@@ -248,7 +248,10 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
     
     def noise_whiten_AET(self, noisy_signal_td_AET, dt, channels=["AE","AE","T"]):
         '''This is vectorised for the AET channels.
-            GPU-enabled only!'''
+            GPU-enabled only!
+            
+            NOTE: this is currently not quite correct. See Ollie's email for the correct whitening!
+            '''
         #FFT the windowed TD signal; obtain freq bins
         
         signal_length= len(noisy_signal_td_AET[0])
@@ -263,7 +266,7 @@ class EMRIGeneratorTDI(keras.utils.Sequence):
         
         
         #Divide FD signal by ASD of noise
-        PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn="noisepsd_"+channel, return_type="PSD") for channel in channels])
+        PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn=A1TDISens, return_type="PSD") for channel in channels])#"noisepsd_"+channel
         
         '''Should this be uncommented?'''
         #Removing NaNs from ASD
