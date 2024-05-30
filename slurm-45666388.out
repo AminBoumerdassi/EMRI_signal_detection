@@ -1,18 +1,0 @@
-
-The following modules were not unloaded:
-   (Use "module --force purge" to unload all):
-
-  1) XALT/minimal   2) slurm   3) NeSI
-2024-04-17 17:22:49.530370: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2024-04-17 17:22:49.530450: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2024-04-17 17:22:49.530487: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2024-04-17 17:22:49.541012: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2024-04-17 17:22:52.620887: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1886] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38298 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:83:00.0, compute capability: 8.0
-2024-04-17 17:23:19.637238: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:442] Loaded cuDNN version 8600
-1 Physical GPUs, 1 Logical GPUs
-1/1 [==============================] - ETA: 0s1/1 [==============================] - 33s 33s/step
-Traceback (most recent call last):
-  File "/scale_wlg_persistent/filesets/project/uoa00195/EMRI_generation/EMRI_signal_detection/plot_reconstructions.py", line 86, in <module>
-    axs[0,col].plot(t, X_EMRIs[col,:,0], "purple", label="True EMRI")
-IndexError: index 4 is out of bounds for axis 1 with size 4

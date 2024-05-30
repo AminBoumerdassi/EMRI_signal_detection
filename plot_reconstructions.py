@@ -12,74 +12,65 @@ import numpy as np
 import cupy as xp
 import matplotlib.pyplot as plt
 
-#from tensorflow import keras
-from tensorflow.keras import models 
-from tensorflow.config import set_logical_device_configuration, list_physical_devices, list_logical_devices
-from tensorflow.config.experimental import set_memory_growth
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torchinfo import summary
+from test_and_train_loop import *
+from model_architecture import ConvAE
+from few.utils.constants import YRSID_SI
+import matplotlib.pyplot as plt
+import os
+from sklearn.model_selection import train_test_split
+
 
 from EMRI_generator_TDI import EMRIGeneratorTDI
 
-#Stop TensorFlow from being greedy with GPU memory
-gpus = list_physical_devices('GPU')
-if gpus:
-  try:
-    # Currently, memory growth needs to be the same across GPUs
-    for gpu in gpus:
-        set_memory_growth(gpu, True)
-    logical_gpus = list_logical_devices('GPU')
-    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-  except RuntimeError as e:
-    # Memory growth must be set before GPUs have been initialized
-    print(e)
-
+# GPU check
+use_cuda = torch.cuda.is_available()
+device = torch.device("cuda:0" if use_cuda else "cpu")
+torch.backends.cudnn.benchmark = True
 
 #Specify some variables
-model_dir= "model_INSERT_SLURM_ID.keras"
+model_state_dict_dir= "model_INSERT_SLURM_ID.pt"
+
+#Load model's weights and architecture
+model= ConvAE().to(device)
+model.load_state_dict(torch.load(model_state_dict_dir))
+model.eval()
 
 #Specify EMRI generator params
 EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy"#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
-val_dataset_size= 4
 batch_size=4#This needs to be such that val_dataset_size/batch_size is evenly divisible
-dim=2**23#22
+dim=2**20
 TDI_channels="AE"
 dt=10
-seed=2021
+seed=2023
 add_noise=False
 
-#Initialise the EMRI generator
-validation_data_generator= EMRIGeneratorTDI(EMRI_params_dir=EMRI_params_dir, batch_size=batch_size, dim=dim, dt=dt,  TDI_channels=TDI_channels, seed=seed, add_noise=add_noise)
+#Initialise the dataset classes for training and val
+EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy"
+EMRI_params= np.load(EMRI_params_dir, allow_pickle=True)
+_, val_params= train_test_split(EMRI_params, test_size=0.3, random_state=seed)
 
-#Load model
-model= models.load_model(model_dir)
+validation_set= EMRIGeneratorTDI(val_params, dim=dim, dt=dt, TDI_channels=TDI_channels, add_noise=add_noise, seed=seed)#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
 
-#Initialise the arrays containing the reconstruction errors for the various cases of EMRI, LISA noise, etc.
-#reconstruction_error_EMRI= np.zeros((val_dataset_size, len(TDI_channels)))#This has separate reconstruction errors for the AET channels so shape (no. EMRIs, no. channels)
-#reconstruction_error_noise= np.zeros((val_dataset_size, len(TDI_channels)))
+#Initialise the data generators as PyTorch dataloaders
+validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
 
-#Generate a batch of whitened validation EMRIs
-X_EMRIs, y_true_EMRIs = validation_data_generator.__getitem__(1)#output is actually a TF tensor!
-
-#Generate a batch of whitened LISA noise for testing
-X_noise= validation_data_generator.get_TDI_noise().get()
-
-#X_noise = validation_data_generator.noise_whiten_AET(X_noise, dt, channels=["AE","AE"]).get()
-y_true_noise =  np.zeros(np.shape(X_EMRIs))#Not whitened but I guess it doesn't need to be
+#Generate one batch of data
+X_EMRIs, y_true_EMRIs = validation_dataloader
 
 #Make predictions with the model
-y_pred_EMRIs= model.predict(X_EMRIs)
-#y_pred_noise= model.predict(X_noise)
-
-#Calculate the reconstruction error between y true and y pred
-'''Reconstructions are not the same as reconstruction errors!'''
-#reconstruction_error_EMRI = np.mean(np.square(y_pred_EMRIs - y_true_EMRIs), axis=1)
-#reconstruction_error_noise = np.mean(np.square(y_pred_noise - y_true_noise), axis=1)
+y_pred_EMRIs= model(X_EMRIs)
 
 #Plot the Y true, Y predicted, and residuals
 '''Do something like 2 rows, 3 columns. Row 1 is for the A channel, row 2 the E channel'''
 ncols=batch_size
 fig, axs= plt.subplots(nrows=3, ncols=ncols, sharex=True)#(ax1, ax2, ax3, ax4, ax5, ax6)
 
-t= np.linspace(0, validation_data_generator.T, num=validation_data_generator.dim)
+t= np.linspace(0, validation_set.T, num=validation_set.dim)
 
 #Plot inputs, predictions and residuals for each column of the subplot
 for col in range(ncols):#subplot, axs.flatten()
@@ -93,33 +84,7 @@ axs[0,0].set(ylabel="Input")
 axs[1,0].set(ylabel="Prediction")
 axs[-1,0].set(xlabel="Time, years", ylabel="Residual")
 
-
-
-
-# #Plot 6 inputs in the A channel
-# ax1.plot(t, X_EMRIs[0,:,0], "purple", label="True EMRI")
-# ax2.plot(t, X_EMRIs[1,:,0], "purple", label="True EMRI")
-# ax3.plot(t, X_EMRIs[2,:,0], "purple", label="True EMRI")
-# ax4.plot(t, X_EMRIs[3,:,0], "purple", label="True EMRI")
-# ax5.plot(t, X_EMRIs[4,:,0], "purple", label="True EMRI")
-# ax6.plot(t, X_EMRIs[5,:,0], "purple", label="True EMRI")
-
-# #Plot 6 predictions in the A channel
-# ax1.plot(t, y_pred_EMRIs[0,:,0], "g", label="Pred. EMRI")
-# ax2.plot(t, y_pred_EMRIs[1,:,0], "g", label="True EMRI")
-# ax3.plot(t, y_pred_EMRIs[2,:,0], "g", label="True EMRI")
-# ax4.plot(t, y_pred_EMRIs[3,:,0], "g", label="True EMRI")
-# ax5.plot(t, y_pred_EMRIs[4,:,0], "g", label="True EMRI")
-# ax6.plot(t, y_pred_EMRIs[5,:,0], "g", label="True EMRI")
-
-# #Plot 6 residuals in the A channel
-# ax1.plot(t, y_pred_EMRIs[0,:,0]-X_EMRIs[0,:,0], "g", label="Pred. EMRI")
-# ax2.plot(t, y_pred_EMRIs[1,:,0], "g", label="True EMRI")
-# ax3.plot(t, y_pred_EMRIs[2,:,0], "g", label="True EMRI")
-# ax4.plot(t, y_pred_EMRIs[3,:,0], "g", label="True EMRI")
-# ax5.plot(t, y_pred_EMRIs[4,:,0], "g", label="True EMRI")
-# ax6.plot(t, y_pred_EMRIs[5,:,0], "g", label="True EMRI")
-
+plt.savefig("testing_data_reconstructions.png")
 
 
 # #Plot the EMRI reconstructions in the A/E channels
@@ -153,12 +118,6 @@ axs[-1,0].set(xlabel="Time, years", ylabel="Residual")
 # axs[3,0].set(ylabel="Residual")
 # axs[0,1].set(title="Reconstructing noise")
 # axs[3,0].set(xlabel="Time, years")
-
-plt.savefig("testing_data_reconstructions.png")
-
-
-
-
 
 
 # for i in range(int(val_dataset_size/batch_size)):
