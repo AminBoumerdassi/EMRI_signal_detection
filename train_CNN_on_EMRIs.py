@@ -44,16 +44,19 @@ n_channels=len(TDI_channels)
 add_noise=False#True
 seed=2023
 
+#Set some seeds within PyTorch
+torch.manual_seed(seed)
+
 #See the architecture of the model
 summary(model, input_size=(batch_size, n_channels, len_seq))
 #print(model)
 
 #Setting training hyperparameters
-epochs=10#0#40#150#5#0#600#5
+epochs=100#0#40#150#5#0#600#5
 
 #Define loss functions and optimizer
 loss_fn= nn.MSELoss().to(device)
-optimizer= torch.optim.Adam(params=model.parameters(), lr=0.001)
+optimizer= torch.optim.Adam(params=model.parameters(), lr=0.001)#lr=0.001
 
 #Initialise the dataset classes for training and val
 EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy"
@@ -85,7 +88,7 @@ for t in range(epochs):
     start= torch.cuda.Event(enable_timing=True)
     end= torch.cuda.Event(enable_timing=True)
 
-    print(f"-----------------------------------\n\t\tEpoch {t+1}\n-----------------------------------")#
+    print(f"-----------------------------------\n\t\tEpoch {t+1}\n-----------------------------------")
     start.record()
     train_loop(training_dataloader, model, loss_fn, optimizer, batch_size, train_history, scaler, "cuda", use_amp=use_amp)
     val_loop(validation_dataloader, model, loss_fn, val_history, scaler,  "cuda", use_amp=use_amp)
@@ -111,3 +114,4 @@ plt.ylabel('Loss')
 plt.legend()
 plt.savefig("training_and_val_loss.png")
 
+'''Missing some the correct kernel initialisers. Implement these!'''

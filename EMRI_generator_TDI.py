@@ -89,8 +89,8 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
 
     def __len__(self):
         'Denotes the total number of samples'
-
-        return 10#1
+        #This could be calculated in terms of batch size and batches per epochs i.e. BS*B_per_epoch
+        return 1024#128
 
     def __getitem__(self, index):
         'Generates one sample of data'

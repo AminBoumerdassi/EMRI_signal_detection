@@ -1,10 +1,9 @@
 import torch
 
 
-'''Need to implement mixed precision in the training loop'''
 def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history, scaler, device, use_amp=True):
-    train_loss=0.
-    size = len(dataloader.dataset)
+    train_loss=0.#Sum of losses across all batches
+    no_batches = len(dataloader)
     # Set the model to training mode - important for batch normalization and dropout layers
     # Unnecessary in this situation but added for best practices
     model.train()
@@ -13,6 +12,7 @@ def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history,
             # Compute prediction and loss in float16 precision
             pred = model(X)
             loss = loss_fn(pred, y)
+            #Sum the current batch's loss with the sum of previous batch losses
             train_loss += loss.item()
 
         # Get scaled gradients from scaled losses
@@ -23,23 +23,23 @@ def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history,
         scaler.update()
         optimizer.zero_grad()
 
-    
-    print(f"Training loss: {train_loss:.6E}")#>7f
+    #Report average per-batch loss by dividing by no. of batches
+    final_loss= train_loss/no_batches
+    print(f"Training loss: {final_loss:.6E}")#>7f
 
         # if batch % 100 == 0:
         #     train_loss, current = train_loss/size, batch * batch_size + len(X)
         #     print(f"Training loss: {train_loss:>7f}  [{current:>5d}/{size:>5d}]")
 
     #Append loss to history
-    train_history.append(train_loss)
+    train_history.append(final_loss)
 
 
 def val_loop(dataloader, model, loss_fn, val_history, scaler, device, use_amp=True):
     # Set the model to evaluation mode - important for batch normalization and dropout layers
     # Unnecessary in this situation but added for best practices
     model.eval()
-    size = len(dataloader.dataset)
-    #num_batches = len(dataloader)
+    no_batches = len(dataloader)
     val_loss = 0.
 
     # Evaluating the model with torch.no_grad() ensures that no gradients are computed during test mode
@@ -49,11 +49,10 @@ def val_loop(dataloader, model, loss_fn, val_history, scaler, device, use_amp=Tr
             with torch.autocast(device_type=device, dtype=torch.float16, enabled=use_amp):
                 pred = model(X)
                 val_loss += loss_fn(pred, y).item()
-                
-    '''I assume that no loss scaling is needed here'''
-    #Reduction method: dividing by ???
-    val_loss /= size
-    print(f"Validation loss: {val_loss:.6E}")#>8f
+    
+    #Report average per batch loss
+    final_loss= val_loss/no_batches
+    print(f"Validation loss: {final_loss:.6E}")#>8f
 
     #Append val. history
-    val_history.append(val_loss)
+    val_history.append(final_loss)

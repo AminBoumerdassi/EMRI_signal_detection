@@ -49,6 +49,9 @@ dt=10
 seed=2023
 add_noise=False
 
+#Set some seeds
+torch.manual_seed(seed)
+
 #Initialise the dataset classes for training and val
 EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy"
 EMRI_params= np.load(EMRI_params_dir, allow_pickle=True)
@@ -60,10 +63,15 @@ validation_set= EMRIGeneratorTDI(val_params, dim=dim, dt=dt, TDI_channels=TDI_ch
 validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
 
 #Generate one batch of data
-X_EMRIs, y_true_EMRIs = validation_dataloader
+X_EMRIs, y_true_EMRIs = next(iter(validation_dataloader))
 
 #Make predictions with the model
 y_pred_EMRIs= model(X_EMRIs)
+
+#Convert everything to numpy arrays
+X_EMRIs= X_EMRIs.detach().cpu().numpy()
+y_true_EMRIs= y_true_EMRIs.detach().cpu().numpy()
+y_pred_EMRIs= y_pred_EMRIs.detach().cpu().numpy()
 
 #Plot the Y true, Y predicted, and residuals
 '''Do something like 2 rows, 3 columns. Row 1 is for the A channel, row 2 the E channel'''
@@ -74,9 +82,9 @@ t= np.linspace(0, validation_set.T, num=validation_set.dim)
 
 #Plot inputs, predictions and residuals for each column of the subplot
 for col in range(ncols):#subplot, axs.flatten()
-  axs[0,col].plot(t, X_EMRIs[col,:,0], "purple", label="True EMRI")
-  axs[1,col].plot(t, y_pred_EMRIs[col,:,0], "b", label="Pred. EMRI")
-  axs[2,col].plot(t, X_EMRIs[col,:,0]-y_pred_EMRIs[col,:,0], "r", label="Residual")
+  axs[0,col].plot(t, X_EMRIs[col,0,:], "purple", label="True EMRI")
+  axs[1,col].plot(t, y_pred_EMRIs[col,0,:], "b", label="Pred. EMRI")
+  axs[2,col].plot(t, X_EMRIs[col,0,:]-y_pred_EMRIs[col,0,:], "r", label="Residual")
 
 # #And label the subplots
 fig.suptitle('EMRI reconstructions in TDI A, SNRs [60,100]')
