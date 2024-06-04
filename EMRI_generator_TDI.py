@@ -1,5 +1,5 @@
 '''
-This is a custom TensorFlow data generator object for generating time-domain EMRIs from a given set of parameters.
+This is a custom Pytorch dataset for generating time-domain EMRIs from a given set of parameters.
 It uses sets of EMRI parameters to generate and store time-domain EMRIs only for as long as is needed in a particular batch. 
 '''
 #---------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ from scipy.signal.windows import tukey
 
 
 class EMRIGeneratorTDI(torch.utils.data.Dataset):
-    'Generates data for Keras'
+    'Generates data for PyTorch'
     def __init__(self, EMRI_params, dim=2**21, dt=10.,  TDI_channels="AET",
                 seed=2023, add_noise=True):#EMRI_params_dir,list_IDs, T=1.,  TDI_channels=['TDIA','TDIE','TDIT'],batch_size=32, shuffle=True,
         'Initialization'

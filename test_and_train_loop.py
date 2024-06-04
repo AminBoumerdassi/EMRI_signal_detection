@@ -1,6 +1,5 @@
 import torch
 
-
 def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history, scaler, device, use_amp=True):
     train_loss=0.#Sum of losses across all batches
     no_batches = len(dataloader)

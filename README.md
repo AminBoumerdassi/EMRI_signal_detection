@@ -9,9 +9,8 @@ The autoencoder learns how to represent EMRI signals in a low-dimensional latent
 
 - Numpy
 - Cupy
-- TensorFlow
+- PyTorch
 - Scipy
 - [FastEMRIWaveforms](https://bhptoolkit.org/FastEMRIWaveforms/html/index.html)
 - [fastlisaresponse](https://github.com/mikekatz04/lisa-on-gpu)
-- AstroPy
 - [LISAanalysistools](https://github.com/mikekatz04/LISAanalysistools)
