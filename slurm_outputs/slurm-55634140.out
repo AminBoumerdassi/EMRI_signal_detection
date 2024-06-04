@@ -1,0 +1,121 @@
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) nvidia/.latest   2) slurm/.latest
+-------------------------------------------------------------------------------
+There are messages associated with the following module(s):
+-------------------------------------------------------------------------------
+
+mamba:
+   - Mamba is a drop-in replacement for conda, offering higher speed and
+   more reliable environment solutions. - Do you really need conda/mamba??
+   Do you know about python virtual environments??? We HIGHLY recommend
+   using virtual envs instead. e.g. python -m venv my-environment - Remember
+   you can change where conda environemnts are created (if you run out of
+   space in your home directory) ``` $ conda config --env --prepend
+   envs_dirs /path/to/my/project/on/fred/.conda/envs $ conda config --env
+   --prepend pkgs_dirs /path/to/my/project/on/fred/.conda/pkgs ``` - To hide
+   this message in the future, load the module with -q ``` $ module -q load
+   conda ```
+
+-------------------------------------------------------------------------------
+
+==========================================================================================
+Layer (type:depth-idx)                   Output Shape              Param #
+==========================================================================================
+ConvAE                                   [8, 2, 1048576]           --
+├─Conv1d: 1-1                            [8, 64, 131072]           8,384
+├─Conv1d: 1-2                            [8, 64, 16384]            266,304
+├─ConvTranspose1d: 1-3                   [8, 64, 131072]           266,304
+├─ConvTranspose1d: 1-4                   [8, 2, 1048576]           8,322
+==========================================================================================
+Total params: 549,314
+Trainable params: 549,314
+Non-trainable params: 0
+Total mult-adds (G): 392.75
+==========================================================================================
+Input size (MB): 67.11
+Forward/backward pass size (MB): 1275.07
+Params size (MB): 2.20
+Estimated Total Size (MB): 1344.37
+==========================================================================================
+#################################
+####DATASET PARAMETERS####
+#Dataset size:  7707
+#Time in years: 0.33226789525261163
+#n_channels:  2
+#dt in seconds:  10
+#Length of timeseries: 1048576
+Noise background:  False
+#################################
+-----------------------------------
+		Epoch 1
+-----------------------------------
+Training loss: 1.079159E-02
+Validation loss: 7.786068E-06
+Epoch time: 89.30s
+
+-----------------------------------
+		Epoch 2
+-----------------------------------
+Training loss: 9.899259E-03
+Validation loss: 7.646134E-06
+Epoch time: 87.58s
+
+-----------------------------------
+		Epoch 3
+-----------------------------------
+Training loss: 9.567570E-03
+Validation loss: 7.532094E-06
+Epoch time: 87.23s
+
+-----------------------------------
+		Epoch 4
+-----------------------------------
+Training loss: 9.351784E-03
+Validation loss: 7.525010E-06
+Epoch time: 86.89s
+
+-----------------------------------
+		Epoch 5
+-----------------------------------
+Training loss: 8.873486E-03
+Validation loss: 7.157552E-06
+Epoch time: 87.21s
+
+-----------------------------------
+		Epoch 6
+-----------------------------------
+Training loss: 8.596921E-03
+Validation loss: 7.349554E-06
+Epoch time: 88.13s
+
+-----------------------------------
+		Epoch 7
+-----------------------------------
+Training loss: 8.739725E-03
+Validation loss: 6.809420E-06
+Epoch time: 87.48s
+
+-----------------------------------
+		Epoch 8
+-----------------------------------
+Training loss: 9.593129E-03
+Validation loss: 7.863222E-06
+Epoch time: 87.62s
+
+-----------------------------------
+		Epoch 9
+-----------------------------------
+Training loss: 9.154168E-03
+Validation loss: 7.443968E-06
+Epoch time: 89.14s
+
+-----------------------------------
+		Epoch 10
+-----------------------------------
+Training loss: 8.883763E-03
+Validation loss: 7.026931E-06
+Epoch time: 90.75s
+
+Done!
