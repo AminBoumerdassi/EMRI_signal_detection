@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2   # number of CPUs per task (1 by default)
 #SBATCH --mem=32G         # amount of memory per node (1 by default)
-##SBATCH --output=./slurm_outputs/slurm-%j.out
+#SBATCH --output=./slurm_testing_outputs/slurm-%j.out
 
 # load required modules and environments
 module purge

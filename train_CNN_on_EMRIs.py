@@ -39,29 +39,27 @@ len_seq= 2**20#23#2**22 gives around 1.3 years, 2**23 around 2.6 years
 dt=10#10
 T= len_seq*dt/round(YRSID_SI)#Not actually input into the generator, it already calculates this and stores as an attribute
 TDI_channels="AE"
-batch_size=8#The code can now handle larger batch sizes like 32 and maybe more
 n_channels=len(TDI_channels)
 add_noise=False#True
 seed=2023
 
+#Setting training hyperparameters
+batch_size=32#16#8
+epochs=20#100#0#40#150#5#0#600#5
+lr=0.005#0.001
+test_size=0.3
+
 #Set some seeds within PyTorch
 torch.manual_seed(seed)
 
-#See the architecture of the model
-summary(model, input_size=(batch_size, n_channels, len_seq))
-#print(model)
-
-#Setting training hyperparameters
-epochs=100#0#40#150#5#0#600#5
-
 #Define loss functions and optimizer
 loss_fn= nn.MSELoss().to(device)
-optimizer= torch.optim.Adam(params=model.parameters(), lr=0.001)#lr=0.001
+optimizer= torch.optim.Adam(params=model.parameters(), lr=lr)
 
 #Initialise the dataset classes for training and val
 EMRI_params_dir="training_data/11011_EMRI_params_SNRs_60_100.npy"
 EMRI_params= np.load(EMRI_params_dir, allow_pickle=True)
-train_params, val_params= train_test_split(EMRI_params, test_size=0.3, random_state=seed)
+train_params, val_params= train_test_split(EMRI_params, test_size=test_size, random_state=seed)
 
 training_set= EMRIGeneratorTDI(train_params, dim=len_seq, dt=dt, TDI_channels=TDI_channels, add_noise=add_noise, seed=seed)#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
 validation_set= EMRIGeneratorTDI(val_params, dim=len_seq, dt=dt, TDI_channels=TDI_channels, add_noise=add_noise, seed=seed)#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
@@ -70,8 +68,21 @@ validation_set= EMRIGeneratorTDI(val_params, dim=len_seq, dt=dt, TDI_channels=TD
 training_dataloader= torch.utils.data.DataLoader(training_set, batch_size=batch_size, shuffle=True)
 validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
 
+#See the architecture of the model
+summary(model, input_size=(batch_size, n_channels, len_seq))
+#print(model)
+
 #Declare generator's parameters
 training_set.declare_generator_params()
+
+#Declare hyperparameters
+print("#################################")
+print("####TRAINING HYPERPARAMETERS####")
+print("#Batch size: ", batch_size)
+print("#Learning rate:", lr)
+print("#Training proportion of dataset: ", 1-test_size)
+print("#No. epochs: ", epochs)
+print("#################################")
 
 #Initialise callbacks
 #TestOnNoise= TestOnNoise(model, training_and_validation_generator)
@@ -88,7 +99,7 @@ for t in range(epochs):
     start= torch.cuda.Event(enable_timing=True)
     end= torch.cuda.Event(enable_timing=True)
 
-    print(f"-----------------------------------\n\t\tEpoch {t+1}\n-----------------------------------")
+    print(f"-----------------------------------\n\t\tEpoch {t+1}/{epochs}\n-----------------------------------")
     start.record()
     train_loop(training_dataloader, model, loss_fn, optimizer, batch_size, train_history, scaler, "cuda", use_amp=use_amp)
     val_loop(validation_dataloader, model, loss_fn, val_history, scaler,  "cuda", use_amp=use_amp)

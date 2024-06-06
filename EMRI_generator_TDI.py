@@ -173,6 +173,9 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
             GPU-enabled only!
             
             NOTE: this is currently not quite correct. See Ollie's email for the correct whitening!
+
+            This could be optimised to work across a batch of signals.
+            It may also be quicker if we use PyTorch's FFT and windowing. Worth testing
             '''
         #FFT the windowed TD signal; obtain freq bins
         
