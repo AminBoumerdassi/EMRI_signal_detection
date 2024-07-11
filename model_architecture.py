@@ -16,10 +16,16 @@ class ConvAE(nn.Module):
          
          OR, maybe a different padding mode could be acceptable here?'''
       self.conv1= nn.Conv1d(2, 64, 65, stride=8, dilation=1, padding=29)#, padding_mode='circular'
+      #self.batch_norm1= nn.BatchNorm1d(64)#, eps=0.001
       self.conv2= nn.Conv1d(64, 64, 65, stride=8, dilation=1, padding=29)#, padding_mode='circular'
+      #self.batch_norm2= nn.BatchNorm1d(128)#, eps=0.001
+      #self.conv3= nn.Conv1d(128, 512, 65, stride=8, dilation=1, padding=29)#, padding_mode='circular'
 
-      self.conv3= nn.ConvTranspose1d(64, 64, 65, stride=8, dilation=1, padding=29, output_padding=1)#
-      self.conv4= nn.ConvTranspose1d(64, 2, 65, stride=8, dilation=1, padding=29, output_padding=1)#
+      #self.deconv3= nn.ConvTranspose1d(512, 128, 65, stride=8, dilation=1, padding=29, output_padding=1)#
+      #self.batch_norm3= nn.BatchNorm1d(128)#, eps=0.001
+      self.deconv2= nn.ConvTranspose1d(64, 64, 65, stride=8, dilation=1, padding=29, output_padding=1)#
+      #self.batch_norm4= nn.BatchNorm1d(64)#, eps=0.001
+      self.deconv1= nn.ConvTranspose1d(64, 2, 65, stride=8, dilation=1, padding=29, output_padding=1)#
 
     def forward(self, x):# x: input data
       '''Defines the sequence
@@ -28,12 +34,21 @@ class ConvAE(nn.Module):
       
       x= self.conv1(x)
       x= F.leaky_relu(x)
+      #x= self.batch_norm1(x)
       x= self.conv2(x)
       x= F.leaky_relu(x)
+      #x= self.batch_norm2(x)
+      #x= self.conv3(x)
+      #x= F.leaky_relu(x)
 
-      x= self.conv3(x)
+
+      #x= self.deconv3(x)
+      #x= F.leaky_relu(x)
+      #x= self.batch_norm3(x)
+      x= self.deconv2(x)
       x= F.leaky_relu(x)
-      x= self.conv4(x)
+      #x= self.batch_norm4(x)
+      x= self.deconv1(x)
 
       return x
     

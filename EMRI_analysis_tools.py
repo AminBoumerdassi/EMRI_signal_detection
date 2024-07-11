@@ -104,9 +104,9 @@ def overlap_AET(sig1_t_AET, sig2_t_AET, delta_t, PSD, use_gpu=True):
 
     inner_prod_h2_h2= inner_prod_AET(sig2_t_AET, sig2_t_AET, delta_t, None, use_gpu=use_gpu)
 
-    overlap= (inner_prod_h1_h2)/np.sqrt(inner_prod_h1_h1* inner_prod_h2_h2)
+    overlap= (inner_prod_h1_h2)/xp.sqrt(inner_prod_h1_h1* inner_prod_h2_h2)
 
-    return np.sqrt(np.sum(overlap**2)/sig1_t_AET.shape[0])
+    return xp.sqrt(xp.sum(overlap**2)/sig1_t_AET.shape[0])
 
 def overlap_AET_batchwise(sig1_t_AET, sig2_t_AET, delta_t, PSD, use_gpu=True):
     """ Network overlap for input shape (batch size, no. chans, length timeseries)
@@ -128,7 +128,7 @@ def overlap_AET_batchwise(sig1_t_AET, sig2_t_AET, delta_t, PSD, use_gpu=True):
 
     inner_prod_h2_h2= inner_prod_AET_batchwise(sig2_t_AET, sig2_t_AET, delta_t, None, use_gpu=use_gpu)
 
-    overlap= (inner_prod_h1_h2)/np.sqrt(inner_prod_h1_h1* inner_prod_h2_h2)
+    overlap= (inner_prod_h1_h2)/xp.sqrt(inner_prod_h1_h1* inner_prod_h2_h2)
 
-    return np.sqrt(np.sum(overlap**2, axis=1)/sig1_t_AET.shape[1])
+    return xp.sqrt(xp.sum(overlap**2, axis=1)/sig1_t_AET.shape[1])
 

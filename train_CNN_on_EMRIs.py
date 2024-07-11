@@ -24,11 +24,19 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 torch.backends.cudnn.benchmark = True
 
+#Turn off some debugging APIs for faster training
+# torch.autograd.profiler.profile(enabled=False)
+# torch.autograd.profiler.emit_nvtx(enabled=False)
+# torch.autograd.set_detect_anomaly(mode=False)
+
 #Stop PyTorch from being greedy with GPU memory
 '''Maybe not needed in torch?'''
 
 #Enable mixed precision
-use_amp=True
+'''Keeping mixed precision off for now as it seems to worsen performance.
+   It needs a bit of finesse, and deeper reading into how best to apply
+   it for this ML problem.'''
+use_amp=False#True
 scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
 
 #Initialise the model and move it to device
@@ -44,9 +52,9 @@ add_noise=False#True
 seed=2023
 
 #Setting training hyperparameters
-batch_size=32#16#8
-epochs=20#100#0#40#150#5#0#600#5
-lr=0.005#0.001
+batch_size=32#32#16#128#32#16#128#64#32#16#8
+epochs=200#100#20#100#0#40#150#5#0#600#5
+lr=0.0008#0.001#0.003#0.002#0.0005#0.001
 test_size=0.3
 
 #Set some seeds within PyTorch
@@ -65,8 +73,8 @@ training_set= EMRIGeneratorTDI(train_params, dim=len_seq, dt=dt, TDI_channels=TD
 validation_set= EMRIGeneratorTDI(val_params, dim=len_seq, dt=dt, TDI_channels=TDI_channels, add_noise=add_noise, seed=seed)#"training_data/EMRI_params_SNRs_20_100_fixed_redshift.npy"
 
 #Initialise the data generators as PyTorch dataloaders
-training_dataloader= torch.utils.data.DataLoader(training_set, batch_size=batch_size, shuffle=True)
-validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
+training_dataloader= torch.utils.data.DataLoader(training_set, batch_size=batch_size, shuffle=True, drop_last=True)
+validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True, drop_last=True)
 
 #See the architecture of the model
 summary(model, input_size=(batch_size, n_channels, len_seq))
@@ -86,8 +94,6 @@ print("#################################")
 
 #Initialise callbacks
 #TestOnNoise= TestOnNoise(model, training_and_validation_generator)
-#ModelCheckpoint= ModelCheckpoint(".", save_weights_only=True, monitor='val_loss',
-#                                 mode='min', save_best_only=True)
 
 #initialise training and validation histories
 train_history=[]
@@ -111,18 +117,24 @@ for t in range(epochs):
 print("Done!")
 
 
+#Save the training and val losses
+'''EDIT THESE FILE NAMES!'''
+np.save("train_history_BS_{:}_lr_0_{:}.npy".format(batch_size, str(lr)[2:]),train_history)
+np.save("val_history_BS_{:}_lr_0_{:}.npy".format(batch_size, str(lr)[2:]), val_history)
+
 #Save model
-torch.save(model.state_dict(), "model_INSERT_SLURM_ID.pt")
+'''EDIT AS NEEDED!'''
+torch.save(model.state_dict(), "model_BS_{:}_lr_0_{:}.pt".format(batch_size, str(lr)[2:]))
 
 
 #Plot losses
-plt.plot(np.arange(1,epochs+1), train_history, "blue", label='Training loss')
+'''plt.plot(np.arange(1,epochs+1), train_history, "blue", label='Training loss')
 plt.plot(np.arange(1,epochs+1), val_history, "orange", label='Validation loss')
 #plt.plot(history.epoch, TestOnNoise.losses, "green", label="Noise loss")
 plt.title('Training loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig("training_and_val_loss.png")
+plt.savefig("training_and_val_loss.png")'''
 
 '''Missing some the correct kernel initialisers. Implement these!'''

@@ -7,7 +7,7 @@ def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history,
     # Unnecessary in this situation but added for best practices
     model.train()
     for X, y in dataloader:#batch, enumerate()
-        with torch.autocast(device_type=device, dtype=torch.float16, enabled=use_amp):
+        with torch.autocast(device_type=device, dtype=torch.float32, enabled=use_amp):#dtype=torch.float16
             # Compute prediction and loss in float16 precision
             pred = model(X)
             loss = loss_fn(pred, y)
@@ -45,7 +45,7 @@ def val_loop(dataloader, model, loss_fn, val_history, scaler, device, use_amp=Tr
     # also serves to reduce unnecessary gradient computations and memory usage for tensors with requires_grad=True
     with torch.no_grad():
         for X, y in dataloader:#batch, enumerate()
-            with torch.autocast(device_type=device, dtype=torch.float16, enabled=use_amp):
+            with torch.autocast(device_type=device, dtype=torch.float32, enabled=use_amp):#dtype=torch.float16
                 pred = model(X)
                 val_loss += loss_fn(pred, y).item()
     

@@ -61,11 +61,12 @@ validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=ba
 #Iterate predictions over the dataloader, store losses
 val_loss_arr_A_E= np.zeros((len(validation_dataloader.dataset), 2))
 
-for batch_idx, data in enumerate(validation_dataloader):
-    X, y= data
-    pred = model(X)
-    #Need to do a manual reduction
-    val_loss_arr_A_E[batch_idx*batch_size:(batch_idx+1)*batch_size, :] = loss(pred, y).mean(axis=2).detach().cpu().numpy()
+with torch.no_grad():
+    for batch_idx, data in enumerate(validation_dataloader):
+        X, y= data
+        pred = model(X)
+        #Need to do a manual reduction
+        val_loss_arr_A_E[batch_idx*batch_size:(batch_idx+1)*batch_size, :] = loss(pred, y).mean(axis=2).detach().cpu().numpy()
 
 #Save losses
 """Currently, this is only actually (1024,2) losses since the dataloader has

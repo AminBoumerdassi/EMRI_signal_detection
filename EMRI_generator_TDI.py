@@ -95,11 +95,17 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
     def __getitem__(self, index):
         'Generates one sample of data'
         X, y = self.data_generation(index)
+
+        #Do a batch-wise noise-gen
+        #Do a batch-wise summation of waveform and noise
+        #Do a batch-wise noise-whitening
+        #Do a batch-wise conversion of xp arr to torch tensor
         
         return X, y            
 
     def data_generation(self, index):
-        'Generate a single noise-whitened TDI EMRI'                
+        'Generate a single noise-whitened TDI EMRI.'
+        'NOTE: this could be optimised with batch-wise versions of whitening etc.'         
         waveform= self.generate_TDI_EMRI(self.EMRI_params[index,:])
         
         #Then preprocess with noise and whitening
@@ -122,6 +128,21 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         N = len(data)
         pow_2 = xp.ceil(cp.log2(N))
         return xp.pad(data,(0,int((2**pow_2)-N)),'constant')
+    
+    def zero_pad_BATCHWISE(self, data):
+        """
+
+        WIP
+
+        This function zero-pads a batch of vectors to length 2^x.
+        Input: (batch_size, no. channels, vector_length)
+        Output: (batch_size, no. channels, padded_vec_length)
+        """
+        N = data.shape[2]#len(data)
+        pow_2 = xp.ceil(xp.log2(N))
+        pad_width= ((0,0),(0,0),(0,int((2**pow_2)-N)))
+        return xp.pad(data, pad_width, 'constant')
+
         
     def noise_td_AET(self, N, dt, channels=["AE","AE","T"]):
         """ 
@@ -140,6 +161,36 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         noise_f = xp.random.normal(0,np.sqrt(variance_noise_f)) + 1j*xp.random.normal(0,np.sqrt(variance_noise_f))
         #Transforming the frequency domain signal into the time domain
         return xp.fft.irfft(noise_f, n=N)
+    
+    def noise_td_AET_BATCHWISE(self, N, dt, batch_size, channels=["AE","AE"]):
+        """
+
+        WIP
+
+        Generate batches of TD AET noise.
+        output: (batch_size, no. channels, time_steps) 
+        """
+        #Pad N to nearest power of 2 for faster FFT calculation
+        pow_2 = xp.ceil(xp.log2(N))
+        N_padded= N+int((2**pow_2)-N)
+
+        #Extract frequency bins for use in PSD
+        freq = xp.fft.rfftfreq(N_padded, dt)
+        freq[0] = freq[1]#avoids NaNs in PSD[0]
+
+        PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn=A1TDISens, return_type="PSD") for channel in channels])
+
+        '''Initialise an array of zeros in the desired shape for PSD_AET,
+            then multiply by the target PSD'''
+
+        #PSD_AET_BATCHWISE= np.ones((batch_size, len(channels), N_padded))
+
+        #Draw samples from multivariate Gaussian
+        variance_noise_f= N*PSD_AET/(4*dt)
+        noise_f = xp.random.normal(0,np.sqrt(variance_noise_f)) + 1j*xp.random.normal(0,np.sqrt(variance_noise_f))
+        #Transforming the frequency domain signal into the time domain
+        return xp.fft.irfft(noise_f, n=N)
+
     
     def generate_TDI_EMRI(self, EMRI_params):#response_wrapper,
         '''
@@ -178,7 +229,6 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
             It may also be quicker if we use PyTorch's FFT and windowing. Worth testing
             '''
         #FFT the windowed TD signal; obtain freq bins
-        
         signal_length= len(noisy_signal_td_AET[0])
         window= xp.asarray(tukey(signal_length, alpha=1/8))
         padded_noisy_signal_td_AET= xp.asarray([self.zero_pad(window*noisy_signal_td) for noisy_signal_td in noisy_signal_td_AET])
@@ -192,23 +242,46 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         
         #Divide FD signal by ASD of noise
         PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn=A1TDISens, return_type="PSD") for channel in channels])#"noisepsd_"+channel
-        
-        '''Should this be uncommented?'''
-        #Removing NaNs from ASD
-        #PSD_AE[0]=PSD_AE[1]
-        
+                
         scaling_factor= ((PSD_AET)/(2*dt))**-0.5#len(noisy_signal_td)
         whitened_signal_fd_AET= scaling_factor*noisy_signal_fd_AET
 
         #IFFTing back into the time domain
         return xp.fft.irfft(whitened_signal_fd_AET, n=len(noisy_signal_td_AET[0]))
     
+    def inner_prod(sig1_t,sig2_t,N_t,delta_t,PSD, use_gpu=True):
+        """ This is only valid if:
+            1. signals are same length
+            2. signals have same no. of channels
+        """
+
+        if use_gpu:#Fine to keep this; these variables are local
+            xp=cp
+        else:
+            xp=np
+        
+        #FFT the two signals
+        freq= xp.fft.fftfreq(N_t, delta_t)
+        freq[0] = freq[1]   # To "retain" the zeroth frequency
+
+        sig1_f= xp.fft.rfft(sig1_t)
+        sig2_f_conj= xp.fft.rfft(sig2_t).conj()
+
+        #Calculate the PSD
+        PSD_AET= xp.asarray([get_sensitivity(freq, sens_fn=A1TDISens, return_type="PSD") for channel in sig1_t.shape[0]])
+        
+        #Calculate the prefactor
+        prefac = 4*delta_t / N_t
+
+        #Calculate the output inn. prod.
+        out= prefac* xp.real(xp.sum((sig1_f*sig2_f_conj)/PSD_AET))
+
+    
     def declare_generator_params(self):
         #Declare generator parameters
         print("#################################")
         print("####DATASET PARAMETERS####")
         print("#Dataset size: ", self.EMRI_params_set_size)
-        #print("#Batch size: ", self.batch_size)
         print("#Time in years:", self.T)
         print("#n_channels: ", self.n_channels)
         print("#dt in seconds: ",self.dt)
