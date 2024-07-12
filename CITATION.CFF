@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: EMRI_signal_detection
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Amin
+    family-names: Boumerdassi
+    email: abou623@aucklanduni.ac.nz
+    affiliation: The University of Auckland
+    orcid: 'https://orcid.org/0000-0002-8260-4072'
+repository-code: 'https://github.com/AminBoumerdassi/EMRI_signal_detection'
+abstract: >-
+  Detecting GW signals from extreme mass ratio inspirals
+  using convolutional autoencoders.
+keywords:
+  - Gravitational waves
+  - Machine Learning
+  - LISA Mission
+  - EMRIs
+  - Signal Detection
