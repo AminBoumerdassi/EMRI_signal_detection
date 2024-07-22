@@ -1,0 +1,31 @@
+This is adapted from the install script that Michael Katz uses.
+
+Works at the time of writing @ 20/07/24
+
+=================================================
+INSTALLING LISAANALYSISTOOLS
+=================================================
+
+conda create -n EMRI_glitch_env -c conda-forge -y gcc_linux-64 gxx_linux-64 wget gsl lapack=3.6.1 hdf5 numpy==1.26.4 pandas Cython scipy tqdm jupyter ipython h5py requests matplotlib python=3.12
+pip install cupy-cuda11x
+pip install lisaanalysistools
+
+=================================================
+INSTALLING FEW;CD TO CLONED FEW REPO
+=================================================
+
+mv scripts/prebuild.py .
+pip install .
+
+=================================================
+INSTALLING FAST LISA RESPONSE; CD TO CLONED LISA-ON-GPU REPO
+
+USE COMMIT f042d4f
+AS THE CURRENT COMMIT HAS UNRESOLVED INSTALLATION ISSUES
+=================================================
+
+python setup.py install
+
+=================================================
+INSTALLING PYTORCH
+=================================================
