@@ -86,6 +86,7 @@ def inner_prod_AET_batchwise(sig1_t_AET, sig2_t_AET, delta_t, PSD, use_gpu=True)
 
 def overlap_AET(sig1_t_AET, sig2_t_AET, delta_t, PSD, use_gpu=True):
     """ Network overlap for input shape (no. chans, length timeseries)
+    Formula taken from p9 of https://arxiv.org/pdf/2310.08927
 
     This is only valid if:
         1. signals are same length
