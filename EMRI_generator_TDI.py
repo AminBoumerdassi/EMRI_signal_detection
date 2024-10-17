@@ -48,7 +48,7 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         self.dim = dim
         self.dt = dt
         self.TDI_channels=TDI_channels
-        self.T= dim*dt/YRSID_SI
+        self.T= (dim*dt/YRSID_SI)+0.005#A tiny bit extra on T to ensure output length =>dim
         self.channels_dict= {"AET":["AE","AE","T"], "AE":["AE","AE"]}#For use in the noise generation and whitening functions
         self.n_channels = len(TDI_channels)
         #self.shuffle = shuffle
@@ -63,7 +63,7 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         # order of the langrangian interpolation
         t0 = 20000.0   # How many samples to remove from start and end of simulations
         order = 25
-        orbit_file_esa = "../../../../fred/oz303/aboumerd/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"#"/nesi/project/uoa00195/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"
+        orbit_file_esa = "/../../../../fred/oz303/aboumerd/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"#"/nesi/project/uoa00195/software/lisa-on-gpu/orbit_files/esa-trailing-orbits.h5"
         orbit_kwargs_esa = dict(orbit_file=orbit_file_esa) # these are the orbit files that you will have cloned if you are using Michaels code.
         # you do not need to generate them yourself. They’re already generated. 
 
@@ -85,7 +85,7 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         self.EMRI_TDI_0PA_ecc = ResponseWrapper(generic_class_waveform_0PA_ecc, self.T, self.dt,
                                         index_lambda, index_beta, t0=t0,
                                         flip_hx = True, use_gpu = use_gpu, is_ecliptic_latitude=False,
-                                        remove_garbage = "zero", n_overide= self.dim, **tdi_kwargs_esa)
+                                        remove_garbage = True,  **tdi_kwargs_esa)#remove_garbage = "zero",n_overide= self.dim,
 
     def __len__(self):
         'Denotes the total number of samples'
@@ -109,13 +109,11 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
         waveform= self.generate_TDI_EMRI(self.EMRI_params[index,:])
         
         #Then preprocess with noise and whitening
+        '''Here, waveform is truncated to ensure the correct input length'''
         noise_AET= self.add_noise * self.noise_td_AET(self.dim, self.dt, channels=self.channels_dict[self.TDI_channels])#["AE","AE","T"]
-        noisy_signal_AET= xp.asarray(waveform)+noise_AET
+        noisy_signal_AET= xp.asarray(waveform)[:,:self.dim]+noise_AET
         X= self.noise_whiten_AET(noisy_signal_AET, self.dt, channels=self.channels_dict[self.TDI_channels])
         
-        #Reshape X and copy X for the model
-        #X=  xp.swapaxes(X, 1, 2).copy()
-
         #Convert X from xp arrays to PyTorch tensors
         X= torch.as_tensor(X, device="cuda").float()
         return X, X      
@@ -230,7 +228,7 @@ class EMRIGeneratorTDI(torch.utils.data.Dataset):
             '''
         #FFT the windowed TD signal; obtain freq bins
         signal_length= len(noisy_signal_td_AET[0])
-        window= xp.asarray(tukey(signal_length, alpha=1/8))
+        window= xp.asarray(tukey(signal_length, alpha=0))# alpha=1/8
         padded_noisy_signal_td_AET= xp.asarray([self.zero_pad(window*noisy_signal_td) for noisy_signal_td in noisy_signal_td_AET])
         
         noisy_signal_fd_AET= xp.fft.rfft(padded_noisy_signal_td_AET)
