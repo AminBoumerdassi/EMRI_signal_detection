@@ -33,7 +33,7 @@ device = torch.device("cuda:0" if use_cuda else "cpu")
 torch.backends.cudnn.benchmark = True
 
 #Specify some variables
-model_state_dict_dir= "model_BS_64_lr_0_0011.pt"#"model_INSERT_SLURM_ID.pt"
+model_state_dict_dir= "model_current.pt"#"model_group_conv_w_normalisation.pt"
 
 #Load model's weights and architecture
 model= ConvAE().to(device)
@@ -65,6 +65,10 @@ validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=ba
 #Generate one batch of data
 X_EMRIs, y_true_EMRIs = next(iter(validation_dataloader))
 
+#Normalise X
+max_abs_tensor= torch.as_tensor([0.9098072, 0.5969127], device="cuda").reshape(2,1)
+X_EMRIs= X_EMRIs/max_abs_tensor
+
 #Make predictions with the model
 y_pred_EMRIs= model(X_EMRIs)
 
@@ -75,5 +79,5 @@ y_pred_EMRIs= y_pred_EMRIs.detach().cpu().numpy()
 
 
 #Save the example EMRIs and their reconstructions!
-np.save("Val_X_EMRIs.npy",X_EMRIs) 
-np.save("Val_pred_EMRIs.npy",y_pred_EMRIs) 
+np.save("Val_X_EMRIs_NORMALISED.npy",X_EMRIs) 
+np.save("Val_pred_EMRIs.npy",y_pred_EMRIs)

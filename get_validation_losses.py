@@ -28,7 +28,7 @@ device = torch.device("cuda:0" if use_cuda else "cpu")
 torch.backends.cudnn.benchmark = True
 
 #Specify some variables
-model_state_dict_dir= "model_BS_64_lr_0_0011.pt"#"model_INSERT_SLURM_ID.pt"
+model_state_dict_dir= "model_BS_32_lr_0_0008_WINDOWED.pt"#model_BS_64_lr_0_0011.pt"
 
 #Load model's weights, architecture, and loss function
 model= ConvAE().to(device)

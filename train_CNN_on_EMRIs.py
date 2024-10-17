@@ -52,9 +52,9 @@ add_noise=False#True
 seed=2023
 
 #Setting training hyperparameters
-batch_size=32#32#16#128#32#16#128#64#32#16#8
-epochs=200#100#20#100#0#40#150#5#0#600#5
-lr=0.0008#0.001#0.003#0.002#0.0005#0.001
+batch_size=32
+epochs=100
+lr=14e-4#8e-4#benchmark at 14e-4
 test_size=0.3
 
 #Set some seeds within PyTorch
@@ -78,7 +78,6 @@ validation_dataloader= torch.utils.data.DataLoader(validation_set, batch_size=ba
 
 #See the architecture of the model
 summary(model, input_size=(batch_size, n_channels, len_seq))
-#print(model)
 
 #Declare generator's parameters
 training_set.declare_generator_params()
@@ -99,6 +98,10 @@ print("#################################")
 train_history=[]
 val_history=[]
 
+#Load data and the normalising tensor
+'''X_EMRIs, y_true_EMRIs = next(iter(validation_dataloader))
+max_abs_tensor= torch.tensor([0.9098072, 0.5969127]).reshape(2,1)'''
+
 #Train the model
 for t in range(epochs):
     #Initialise variables for measuring time of an epoch
@@ -114,27 +117,37 @@ for t in range(epochs):
     #Print time for 1 epoch
     torch.cuda.synchronize()
     print("Epoch time: {:.2f}s\n".format(start.elapsed_time(end)/1000))
+    #Save model if lowest loss achieved
+    if val_history[-1] == np.array(val_history).min():
+        torch.save(model.state_dict(), "model_current.pt")
+    
+    #Save the current history
+    '''np.save("train_history_current.npy",train_history)
+    np.save("val_history_current.npy", val_history)'''
+
+    #Quick plot of reconstructions at this particular epoch
+    '''y_pred_EMRIs= model(X_EMRIs)
+    plt.figure()
+    plt.title("Val. data reconstruction at epoch {:}".format(t))
+    plt.xlabel("Time, years")
+    plt.ylabel("Strain")
+    plt.plot(np.linspace(0, T, num=len_seq)[:3000], y_true_EMRIs[0,0,:3000].detach().cpu().numpy(), label="Un-normalised input")
+    plt.plot(np.linspace(0, T, num=len_seq)[:3000], y_pred_EMRIs[0,0,:3000].detach().cpu().numpy(), label="Prediction")
+    plt.plot(np.linspace(0, T, num=len_seq)[:3000], y_true_EMRIs[0,0,:3000].detach().cpu().numpy()-y_pred_EMRIs[0,0,:3000].detach().cpu().numpy(), label="residual")
+    plt.legend(loc='upper right')
+    plt.savefig("reconstructions_td_live_epoch_{:}.png".format(t))'''
+
 print("Done!")
 
 
 #Save the training and val losses
 '''EDIT THESE FILE NAMES!'''
-np.save("train_history_BS_{:}_lr_0_{:}.npy".format(batch_size, str(lr)[2:]),train_history)
-np.save("val_history_BS_{:}_lr_0_{:}.npy".format(batch_size, str(lr)[2:]), val_history)
+np.save("train_history.npy",train_history)
+np.save("val_history.npy", val_history)
+# np.save("train_history_BS_{:}_lr_0_{:}.npy".format(batch_size, str(lr)[2:]),train_history)
+# np.save("val_history_BS_{:}_lr_0_{:}.npy".format(batch_size, str(lr)[2:]), val_history)
 
 #Save model
 '''EDIT AS NEEDED!'''
-torch.save(model.state_dict(), "model_BS_{:}_lr_0_{:}.pt".format(batch_size, str(lr)[2:]))
-
-
-#Plot losses
-'''plt.plot(np.arange(1,epochs+1), train_history, "blue", label='Training loss')
-plt.plot(np.arange(1,epochs+1), val_history, "orange", label='Validation loss')
-#plt.plot(history.epoch, TestOnNoise.losses, "green", label="Noise loss")
-plt.title('Training loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-plt.savefig("training_and_val_loss.png")'''
-
-'''Missing some the correct kernel initialisers. Implement these!'''
+#torch.save(model.state_dict(), "model_BS_{:}_lr_0_{:}.pt".format(batch_size, str(lr)[2:]))
+#torch.save(model.state_dict(), "model_current.pt")

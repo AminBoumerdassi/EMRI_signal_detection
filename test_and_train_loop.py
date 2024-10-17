@@ -6,8 +6,17 @@ def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history,
     # Set the model to training mode - important for batch normalization and dropout layers
     # Unnecessary in this situation but added for best practices
     model.train()
+
+    #Set up a normalising tensor of maximum absolutes for our inputs
+    max_abs_tensor= torch.as_tensor([0.9098072, 0.5969127], device="cuda").reshape(2,1)
+    std_tensor= torch.as_tensor([0.0089, 0.0087], device="cuda").reshape(2,1)
+
     for X, y in dataloader:#batch, enumerate()
         with torch.autocast(device_type=device, dtype=torch.float32, enabled=use_amp):#dtype=torch.float16
+            #Normalise input data
+            X=X/max_abs_tensor#/std_tensor
+            y=y#/std_tensor
+
             # Compute prediction and loss in float16 precision
             pred = model(X)
             loss = loss_fn(pred, y)
@@ -26,10 +35,6 @@ def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history,
     final_loss= train_loss/no_batches
     print(f"Training loss: {final_loss:.6E}")#>7f
 
-        # if batch % 100 == 0:
-        #     train_loss, current = train_loss/size, batch * batch_size + len(X)
-        #     print(f"Training loss: {train_loss:>7f}  [{current:>5d}/{size:>5d}]")
-
     #Append loss to history
     train_history.append(final_loss)
 
@@ -41,10 +46,18 @@ def val_loop(dataloader, model, loss_fn, val_history, scaler, device, use_amp=Tr
     no_batches = len(dataloader)
     val_loss = 0.
 
+    #Set up a normalising tensor of maximum absolutes for our inputs
+    max_abs_tensor= torch.as_tensor([0.9098072, 0.5969127], device="cuda").reshape(2,1)
+    std_tensor= torch.as_tensor([0.0089, 0.0087], device="cuda").reshape(2,1)
+
     # Evaluating the model with torch.no_grad() ensures that no gradients are computed during test mode
     # also serves to reduce unnecessary gradient computations and memory usage for tensors with requires_grad=True
     with torch.no_grad():
         for X, y in dataloader:#batch, enumerate()
+            #Normalise input data
+            X=X/max_abs_tensor#/std_tensor
+            y=y#/std_tensor
+
             with torch.autocast(device_type=device, dtype=torch.float32, enabled=use_amp):#dtype=torch.float16
                 pred = model(X)
                 val_loss += loss_fn(pred, y).item()
