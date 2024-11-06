@@ -13,53 +13,108 @@ class ConvAE(nn.Module):
       
       '''Quick idea to test. Why not just double or even 10x the padding? May help with
          getting rid of the artefacts.'''
-      self.conv1= nn.Conv1d(2, 32, 65, stride=8, padding=59)#29
-      self.conv2= nn.Conv1d(32, 64, 65, stride=8, groups=8, padding=59)#
+      self.conv1= nn.Conv1d(2, 32, 65, stride=8, padding=59)#29, 59
+      self.conv2= nn.Conv1d(32, 64, 65, stride=8, groups=8, padding=59)#29, 59
       '''Try groups=16 since we actually have twice as many input features at the deeper layers'''
-      #self.conv3= nn.Conv1d(64, 64, 65, stride=1, groups=16)
-      #self.deconv3= nn.ConvTranspose1d(64, 64, 65, stride=1, groups=16, output_padding=0)
-      self.deconv2= nn.ConvTranspose1d(64, 32, 65, stride=8, groups=8, padding=59, output_padding=4)#padding=29, output_padding=1
-      self.deconv1= nn.ConvTranspose1d(32, 2, 65, stride=8, padding=59, output_padding=5)#padding=29, output_padding=1
+      self.conv3= nn.Conv1d(64, 64, 65, stride=8, groups=8, padding=59)
+      self.deconv3= nn.ConvTranspose1d(64, 64, 65, stride=8, groups=8, padding=59, output_padding=5)
+      self.deconv2= nn.ConvTranspose1d(64, 32, 65, stride=8, groups=8, padding=59,output_padding=4)#padding=29,output_padding=1 OR padding=59,output_padding=4
+      self.deconv1= nn.ConvTranspose1d(32, 2, 65, stride=8, padding=59, output_padding=5)#padding=#29, output_padding=1 OR padding=59, output_padding=5
       
       self.chan_shuffle_16= nn.ChannelShuffle(16)
       self.chan_shuffle_8= nn.ChannelShuffle(8)
 
-      self.bn_2= nn.BatchNorm1d(32)
-      self.de_bn_2= nn.BatchNorm1d(32)
+      #self.bn_2= nn.BatchNorm1d(32)
+      #self.bn_3= nn.BatchNorm1d(64)
+      #self.de_bn_2= nn.BatchNorm1d(32)
+
+      self.group_norm_1= nn.GroupNorm(8, 32)
+      self.group_norm_2= nn.GroupNorm(8, 64)
+      self.degroup_norm_2= nn.GroupNorm(8, 32)
+
+      self.dropout_1= nn.Dropout(p=0.2)
+      self.dropout_2= nn.Dropout(p=0.2)
+      self.dropout_3= nn.Dropout(p=0.2)
+      self.dedropout_3= nn.Dropout(p=0.2)
+      self.dedropout_2= nn.Dropout(p=0.2)
+      self.dedropout_1= nn.Dropout(p=0.2)
+
+
     def forward(self, x):# x: input data
       '''Defines the sequence
          of layers and activation functions that the input passes through,
          and returns the output of the model'''
-      #x= nn.ZeroPad1d((29,29))(x)
-      x= self.conv1(x)
-      '''For the leaky relu let's try Mica's value of 0.1! Or even tensorflow's default of 0.4'''
-      x= F.leaky_relu(x)
-
+      '''Can we retry the batch/group/layer norm just one more time??'''
+      enc_1= F.leaky_relu(self.conv1(x))
+      enc_1= self.dropout_1(enc_1)
       #x= self.bn_2(x)
+      #x= self.group_norm_1(x)
+      #x= F.leaky_relu(x)#, negative_slope=0.1
+
+      #x= nn.ZeroPad1d((29,29))(x)
+      enc_2= F.leaky_relu(self.conv2(enc_1))
+      enc_2= self.dropout_2(enc_2)
+      #x= self.bn_3(x)
+      #x= self.group_norm_2(x)
+      #x= F.leaky_relu(x)#, negative_slope=0.1
+
+      #x= self.chan_shuffle_16(x).detach()
+
+      '''Could these deeper layers benefit from smaller kernel sizes?
+      My intuition is that smaller kernels force that layer to pick up local features.'''
+      enc_3= F.leaky_relu(self.conv3(enc_2))
+      enc_3= self.dropout_3(enc_3)
+      #x= F.leaky_relu(x)
+
+      #x= self.chan_shuffle_16(x).detach()
+
+      dec_3= F.leaky_relu(self.deconv3(enc_3))
+      dec_3= self.dedropout_3(dec_3)
+      # x= F.leaky_relu(x)
+
+      #x= self.chan_shuffle_8(x).detach()
+      dec_2= F.leaky_relu(self.deconv2(dec_3+enc_2))
+      dec_2= self.dedropout_2(dec_2)
+      #x= self.de_bn_2(x)
+      #x= self.degroup_norm_2(x)
+      #x= F.leaky_relu(x)#, negative_slope=0.1
+      #x= nn.ZeroPad1d((29,29))(x)
+
+      dec_1= self.deconv1(dec_2+enc_1)
+
+      '''x= self.conv1(x)
+      #x= self.bn_2(x)
+      #x= self.group_norm_1(x)
+      x= F.leaky_relu(x)#, negative_slope=0.1
+
       #x= nn.ZeroPad1d((29,29))(x)
       x= self.conv2(x)
-      x= F.leaky_relu(x)
+      #x= self.bn_3(x)
+      #x= self.group_norm_2(x)
+      x= F.leaky_relu(x)#, negative_slope=0.1
 
       #x= self.chan_shuffle_16(x).detach()
 
-      #x= self.conv3(x)
-      #x= F.leaky_relu(x)
+      # x= self.conv3(x)
+      # x= F.leaky_relu(x)
 
       #x= self.chan_shuffle_16(x).detach()
 
-      #x= self.deconv3(x)
-      #x= F.leaky_relu(x)
+      # x= self.deconv3(x)
+      # x= F.leaky_relu(x)
 
       #x= self.chan_shuffle_8(x).detach()
       x= self.deconv2(x)
-      x= F.leaky_relu(x)
-      #x= nn.ZeroPad1d((29,29))(x)
-
-
       #x= self.de_bn_2(x)
+      #x= self.degroup_norm_2(x)
+      x= F.leaky_relu(x)#, negative_slope=0.1
       #x= nn.ZeroPad1d((29,29))(x)
-      x= self.deconv1(x)
-      return x
+
+
+      #x= nn.ZeroPad1d((29,29))(x)
+      x= self.deconv1(x)'''
+
+      return dec_1#x
     
     def padding_size(self, stride, L_out, L_in, dilation, kernel_size):
       '''Something strange about this function. It can sometimes give
