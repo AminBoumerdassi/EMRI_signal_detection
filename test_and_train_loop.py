@@ -8,13 +8,13 @@ def train_loop(dataloader, model, loss_fn, optimizer, batch_size, train_history,
     model.train()
 
     #Set up a normalising tensor of maximum absolutes for our inputs
-    max_abs_tensor= torch.as_tensor([0.9098072, 0.5969127], device="cuda").reshape(2,1)
-    std_tensor= torch.as_tensor([0.0089, 0.0087], device="cuda").reshape(2,1)
+    max_abs_tensor= torch.as_tensor([0.09124915, 0.05969127], device="cuda").reshape(2,1)#[0.9098072, 0.5969127]
+    #std_tensor= torch.as_tensor([0.0089, 0.0087], device="cuda").reshape(2,1)
 
     for X, y in dataloader:#batch, enumerate()
         with torch.autocast(device_type=device, dtype=torch.float32, enabled=use_amp):#dtype=torch.float16
             #Normalise input data
-            X=X/max_abs_tensor#/std_tensor
+            X=X/max_abs_tensor#/std_tensor#
             y=y#/std_tensor
 
             # Compute prediction and loss in float16 precision
@@ -47,8 +47,8 @@ def val_loop(dataloader, model, loss_fn, val_history, scaler, device, use_amp=Tr
     val_loss = 0.
 
     #Set up a normalising tensor of maximum absolutes for our inputs
-    max_abs_tensor= torch.as_tensor([0.9098072, 0.5969127], device="cuda").reshape(2,1)
-    std_tensor= torch.as_tensor([0.0089, 0.0087], device="cuda").reshape(2,1)
+    max_abs_tensor= torch.as_tensor([0.09124915, 0.05969127], device="cuda").reshape(2,1)#[0.9098072, 0.5969127]
+    #std_tensor= torch.as_tensor([0.0089, 0.0087], device="cuda").reshape(2,1)
 
     # Evaluating the model with torch.no_grad() ensures that no gradients are computed during test mode
     # also serves to reduce unnecessary gradient computations and memory usage for tensors with requires_grad=True
